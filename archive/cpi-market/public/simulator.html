@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campaign Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/app.css">
+<script src="/app.js"></script>
+<style>
+  .setup { display: grid; gap: 18px; }
+  .derived { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+  .derived b { color: var(--ink); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .run-bar { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; justify-content: space-between; padding-top: 4px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .seed-field { width: 220px; }
+  .playback { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .playback select { width: auto; height: 32px; }
+  .clock { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 14px; margin-left: auto; }
+  .chart-wrap { position: relative; }
+  .tip {
+    position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line-strong);
+    box-shadow: var(--shadow); border-radius: 8px; padding: 7px 10px; font-size: 12px; line-height: 1.5;
+    font-variant-numeric: tabular-nums; min-width: 150px; transform: translate(-50%, -100%); white-space: nowrap;
+  }
+  .tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 18px; }
+  @media (max-width: 900px) { .result-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<nav id="topnav"></nav>
+<div class="page">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">Endpoint 1 · one campaign</p>
+      <h1>Campaign simulator</h1>
+      <p class="lede">Pick a budget, an expected CPI and a duration, then watch a single campaign run hour by hour: publishers arrive and join, coins mint, the CPI settles, and whatever the market can't absorb goes back to you as a refund.</p>
+    </div>
+    <a class="doc-link" href="/docs.html#campaign">How this simulator works</a>
+  </header>
+
+  <main class="grid">
+    <!-- ── setup ── -->
+    <section class="card setup">
+      <div class="card-head" style="margin:0">
+        <div class="card-title"><span class="step-num">1</span><h2>Set up the campaign</h2></div>
+        <div class="presets" id="presets">
+          <button class="preset" data-p="100000,2.5,10">Default</button>
+          <button class="preset" data-p="20000,1.5,3">Small test</button>
+          <button class="preset" data-p="500000,4,21">Big brand launch</button>
+          <button class="preset" data-p="150000,2,60">Long always-on</button>
+        </div>
+      </div>
+
+      <div class="fields">
+        <div class="field">
+          <label for="budget">Budget</label>
+          <div class="prefix-wrap"><span>$</span><input id="budget" type="number" value="100000" min="1" step="1000"></div>
+          <div class="hint">Total cash you put in the pool.</div>
+        </div>
+        <div class="field">
+          <label for="cpi">Expected CPI</label>
+          <div class="prefix-wrap"><span>$</span><input id="cpi" type="number" value="2.50" min="0.01" step="0.1"></div>
+          <div class="hint">Your guess per impression. A starting point, not the price. <a class="doc-link inline" href="/docs.html#pricing">Why?</a></div>
+        </div>
+        <div class="field">
+          <label for="days">Duration (days)</label>
+          <input id="days" type="number" value="10" min="1" max="90">
+          <div class="hint">1–90 days. Simulated hour by hour.</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card-title" style="margin-bottom:8px">
+          <span class="label" style="margin:0">Publisher market</span>
+          <a class="doc-link inline" href="/docs.html#archetypes">What do these mean?</a>
+        </div>
+        <div class="choices" id="archetypes"></div>
+      </div>
+
+      <div class="derived" id="derived"></div>
+
+      <div class="run-bar">
+        <div class="field seed-field">
+          <label for="seed">Random seed <a class="doc-link inline" href="/docs.html#seeds">(?)</a></label>
+          <div class="input-group">
+            <input id="seed" type="number" min="1" data-seed>
+            <button class="btn ghost icon" data-seed-roll="seed" title="Roll a new seed">🎲</button>
+          </div>
+          <div class="hint">Same seed + same inputs = the same campaign.</div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="runBtn">▶ Run campaign</button>
+        </div>
+      </div>
+      <div class="err" id="err"></div>
+    </section>
+
+    <!-- ── live run ── -->
+    <section class="card hidden fade-in" id="runCard">
+      <div class="card-head">
+        <div class="card-title">
+          <span class="step-num">2</span><h2>Live run</h2>
+          <span id="archLabel" class="pill"></span>
+          <span id="priceLabel" class="pill accent"></span>
+          <span id="seedLabel" class="pill"></span>
+        </div>
+        <a class="doc-link" href="/docs.html#campaign-live">Reading the live view</a>
+      </div>
+      <div class="playback">
+        <button id="playBtn" class="btn ghost small" style="width:84px">Pause</button>
+        <select id="speed" aria-label="Playback speed">
+          <option value="12">12 h / sec</option>
+          <option value="48" selected>2 days / sec</option>
+          <option value="168">7 days / sec</option>
+          <option value="99999">Instant</option>
+        </select>
+        <button id="restartBtn" class="btn ghost small">↺ Replay</button>
+        <button id="endBtn" class="btn ghost small">Skip to settlement ⏭</button>
+        <span class="clock" id="clock"></span>
+      </div>
+      <div class="track"><div id="progress"></div></div>
+      <div class="stats" id="liveStats" style="margin-top:14px"></div>
+      <div class="grid split" style="margin-top:16px">
+        <div>
+          <div class="chart-wrap">
+            <svg id="chart" class="chart" viewBox="0 0 700 260" role="img" aria-label="Coins minted and CPI over the campaign"></svg>
+            <div class="tip hidden" id="tip"></div>
+          </div>
+          <div class="legend">
+            <span><i class="key area" style="background:var(--c-coins)"></i>coins minted (left axis)</span>
+            <span><i class="key" style="background:var(--c-cpi)"></i>estimated CPI</span>
+            <span style="color:var(--c-pool)"><i class="key dash"></i><span style="color:var(--muted)">pool split B/M</span></span>
+            <span style="color:var(--c-posted)"><i class="key dash"></i><span style="color:var(--muted)">posted price</span></span>
+          </div>
+        </div>
+        <div>
+          <span class="label">Join feed</span>
+          <div class="feed" id="feed"></div>
+          <div class="table-wrap" style="margin-top:12px">
+            <table>
+              <thead><tr><th>Publisher</th><th>Joined</th><th>Coins</th><th>Payout</th></tr></thead>
+              <tbody id="pubBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── settlement ── -->
+    <section class="card hidden fade-in" id="resultCard">
+      <div class="card-head">
+        <div class="card-title"><span class="step-num">3</span><h2>Settlement</h2><span id="healBadge" class="pill"></span></div>
+        <div class="actions">
+          <a class="doc-link" href="/docs.html#settlement">How settlement works</a>
+          <button class="btn ghost small" id="copyBtn">🔗 Copy link to this run</button>
+          <button class="btn ghost small" id="jsonBtn">⬇ JSON</button>
+          <button class="btn small" id="rerollBtn">🎲 New seed & run again</button>
+        </div>
+      </div>
+
+      <div class="verdict" id="verdictBox">
+        <div class="icon" id="verdictIcon"></div>
+        <div><h4 id="verdictTitle"></h4><p id="verdict"></p></div>
+      </div>
+
+      <div class="stats" id="finalStats"></div>
+
+      <div class="result-grid">
+        <div>
+          <h3>Where the budget went</h3>
+          <div class="splitbar" id="splitBar"></div>
+          <div class="splitlegend" id="splitLegend"></div>
+
+          <h3>Price comparison <a class="doc-link inline" href="/docs.html#prices" style="text-transform:none;letter-spacing:0">what are these?</a></h3>
+          <div id="priceBars"></div>
+        </div>
+        <div>
+          <h3>Publisher outcome</h3>
+          <div class="stats" id="pubStats"></div>
+          <h3>Top earners</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Publisher</th><th title="Hidden reservation price — the mechanism never sees this">Ask</th><th>Coins</th><th>Payout</th><th>Ask met?</th></tr></thead>
+              <tbody id="topBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const { $, money, cpi, count: coins, stat } = UI;
+
+// Archetype meta mirrors sim/campaign.js ARCHETYPES (supply vs target, publisher price level).
+const ARCH = [
+  ['random', 'Surprise me', 'One of the six below, with its numbers jittered'],
+  ['thin', 'Thin liquidity', 'Supply 0.25× target · asks 1.5× your CPI'],
+  ['balanced', 'Balanced', 'Supply 1.2× target · asks ≈ your CPI'],
+  ['abundant', 'Abundant', 'Supply 3× target · asks 0.6× your CPI'],
+  ['earlyBurst', 'Early burst', 'Balanced, but most arrive in the first days'],
+  ['lateBurst', 'Late rush', 'Balanced, but most arrive near the end'],
+  ['premium', 'Premium supply', 'Supply 0.6× target · asks 2× your CPI'],
+];
+let archetype = 'balanced';
+
+let run = null;      // the simulation result
+let cursor = 0;      // hours played
+let timer = null;
+let playing = false;
+
+function renderArchetypes() {
+  $('archetypes').innerHTML = ARCH.map(([id, name, desc]) =>
+    '<button class="choice" data-id="' + id + '" aria-pressed="' + (id === archetype) + '"><b>' + name + '</b><span>' + desc + '</span></button>').join('');
+  for (const b of $('archetypes').querySelectorAll('.choice')) {
+    b.onclick = () => { archetype = b.dataset.id; renderArchetypes(); };
+  }
+}
+
+function renderDerived() {
+  const b = Number($('budget').value), c = Number($('cpi').value), d = Number($('days').value);
+  const ok = b > 0 && c > 0 && d > 0;
+  $('derived').innerHTML = ok
+    ? '<span>Target volume <b>' + coins(b / c) + '</b> impressions (budget ÷ CPI)</span>'
+      + '<span>Runs for <b>' + Math.round(d * 24).toLocaleString() + '</b> hours</span>'
+      + '<span>Budget per day <b>' + money(b / d) + '</b></span>'
+    : '<span>Enter a positive budget, CPI and duration.</span>';
+}
+
+function inputs() {
+  return {
+    budget: Number($('budget').value),
+    expectedCpi: Number($('cpi').value),
+    durationDays: Number($('days').value),
+    archetype,
+    seed: $('seed').value.trim(),
+  };
+}
+
+async function start() {
+  $('err').textContent = '';
+  $('runBtn').disabled = true;
+  $('runBtn').textContent = 'Running…';
+  try {
+    const data = await UI.api('/api/simulate/campaign', 'POST', inputs());
+    run = data;
+    $('runCard').classList.remove('hidden');
+    $('resultCard').classList.add('hidden');
+    $('archLabel').textContent = data.campaign.archetypeLabel;
+    $('priceLabel').textContent = 'posted ' + cpi(data.pricing.postedPrice) + ' · ' + data.pricing.source;
+    $('seedLabel').textContent = 'seed ' + data.campaign.seed;
+    $('seed').value = data.campaign.seed;
+    restart();
+    $('runCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    $('err').textContent = e.message;
+  }
+  $('runBtn').disabled = false;
+  $('runBtn').textContent = '▶ Run campaign';
+}
+
+function restart() {
+  cursor = 0;
+  $('feed').innerHTML = '';
+  $('resultCard').classList.add('hidden');
+  draw();
+  play();
+}
+
+function play() {
+  stop();
+  playing = true;
+  $('playBtn').textContent = 'Pause';
+  const perSecond = Number($('speed').value);
+  if (perSecond > 9999) { cursor = run.timeline.length; return finish(); }
+  const tick = 40;
+  const step = Math.max(1, Math.round((perSecond * tick) / 1000));
+  timer = setInterval(() => {
+    cursor = Math.min(run.timeline.length, cursor + step);
+    draw();
+    if (cursor >= run.timeline.length) finish();
+  }, tick);
+}
+
+function stop() {
+  if (timer) clearInterval(timer);
+  timer = null;
+  playing = false;
+  $('playBtn').textContent = cursor >= (run ? run.timeline.length : 0) ? 'Done' : 'Play';
+}
+
+function finish() {
+  stop();
+  draw();
+  showResult();
+}
+
+function draw() {
+  if (!run) return;
+  const t = run.timeline[Math.max(0, cursor - 1)] || run.timeline[0];
+  const total = run.timeline.length;
+  const c = run.campaign;
+  $('clock').textContent = 'Day ' + t.day + ' / ' + c.durationDays + '  ·  hour ' + cursor + ' / ' + total;
+  $('progress').style.width = ((cursor / total) * 100).toFixed(1) + '%';
+  $('liveStats').innerHTML =
+    stat('publishers live', t.live) +
+    stat('coins minted', coins(t.coins), { cls: 'accent' }) +
+    stat('estimated CPI', cpi(t.estimatedCpi), { cls: 'good', title: 'min(posted price, budget ÷ coins so far). Can only fall.' }) +
+    stat('committed', money(t.spend)) +
+    stat('refund if closed now', money(t.refundIfClosedNow), { cls: 'warn' }) +
+    stat('minting rate / h', coins(t.mintRate));
+  drawChart(cursor);
+  drawFeed();
+  drawPublishers(t.estimatedCpi);
+}
+
+function drawFeed() {
+  const feed = $('feed');
+  const upto = run.timeline.slice(0, cursor).filter((h) => h.joined > 0);
+  const lines = upto.slice(-40).map((h) =>
+    '<div>h' + String(h.hour).padStart(4, ' ') + '  <b>+' + h.joined + '</b> joined  ' + h.joinedNames.join(' ') + '</div>');
+  if (!lines.length) lines.push('<div>waiting for publishers…</div>');
+  feed.innerHTML = lines.join('');
+  feed.scrollTop = feed.scrollHeight;
+}
+
+function drawPublishers(estCpi) {
+  const joinedByNow = new Set();
+  for (const h of run.timeline.slice(0, cursor)) for (const n of h.joinedNames) joinedByNow.add(n);
+  const done = cursor >= run.timeline.length;
+  const rows = run.publishers
+    .filter((p) => joinedByNow.has(p.name))
+    .slice(0, 10)
+    .map((p) => {
+      const c = done ? p.coins : p.coins * (cursor / run.timeline.length);
+      const pay = done ? p.payout : c * estCpi;
+      return '<tr><td>' + p.name + '</td><td>h' + p.joined + '</td><td>' + coins(c) + '</td><td>' + money(pay) + '</td></tr>';
+    });
+  $('pubBody').innerHTML = rows.length ? rows.join('') : '<tr><td colspan="4" class="empty">none yet</td></tr>';
+}
+
+const G = { W: 700, H: 260, P: { l: 56, r: 56, t: 16, b: 28 } };
+
+function scales() {
+  const series = run.timeline;
+  const { W, H, P } = G;
+  const maxCoins = Math.max.apply(null, series.map((h) => h.coins)) || 1;
+  const cpiVals = series.map((h) => h.estimatedCpi).concat([run.pricing.postedPrice]);
+  const maxCpi = Math.max.apply(null, cpiVals) * 1.15;
+  return {
+    maxCoins, maxCpi,
+    X: (i) => P.l + (i / (series.length - 1 || 1)) * (W - P.l - P.r),
+    Yc: (v) => H - P.b - (v / maxCoins) * (H - P.t - P.b),
+    Yp: (v) => H - P.b - (v / maxCpi) * (H - P.t - P.b),
+  };
+}
+
+function drawChart(upto) {
+  const svg = $('chart');
+  const { W, H, P } = G;
+  const series = run.timeline;
+  const { maxCoins, maxCpi, X, Yc, Yp } = scales();
+  const shown = series.slice(0, Math.max(1, upto));
+
+  const area = shown.map((h, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Yc(h.coins).toFixed(1)).join('')
+    + 'L' + X(shown.length - 1).toFixed(1) + ',' + (H - P.b) + 'L' + P.l + ',' + (H - P.b) + 'Z';
+  const coinLine = shown.map((h, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Yc(h.coins).toFixed(1)).join('');
+  const cpiLine = shown.map((h, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Yp(h.estimatedCpi).toFixed(1)).join('');
+  const poolLine = shown.map((h, i) => {
+    const v = h.coins > 0 ? Math.min(run.campaign.budget / h.coins, maxCpi) : maxCpi;
+    return (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Yp(v).toFixed(1);
+  }).join('');
+  const playX = X(Math.max(0, upto - 1)).toFixed(1);
+
+  const grid = [0.25, 0.5, 0.75, 1].map((f) => {
+    const y = (H - P.b - f * (H - P.t - P.b)).toFixed(1);
+    return '<line x1="' + P.l + '" y1="' + y + '" x2="' + (W - P.r) + '" y2="' + y + '" stroke="var(--line)" stroke-dasharray="2 4"/>'
+      + '<text x="' + (P.l - 8) + '" y="' + (Number(y) + 3) + '" font-size="10" fill="var(--c-coins)" text-anchor="end">' + coins(maxCoins * f) + '</text>'
+      + '<text x="' + (W - P.r + 8) + '" y="' + (Number(y) + 3) + '" font-size="10" fill="var(--c-cpi)">' + cpi(maxCpi * f) + '</text>';
+  }).join('');
+  const dayTicks = [];
+  const dayStep = Math.max(1, Math.round(run.campaign.durationDays / 6));
+  for (let d = dayStep; d <= run.campaign.durationDays; d += dayStep) {
+    const i = Math.min(series.length - 1, d * 24 - 1);
+    dayTicks.push('<text x="' + X(i).toFixed(1) + '" y="' + (H - 9) + '" font-size="10" fill="var(--muted)" text-anchor="middle">day ' + d + '</text>');
+  }
+  const py = Yp(run.pricing.postedPrice).toFixed(1);
+  svg.innerHTML = grid
+    + '<line x1="' + P.l + '" y1="' + (H - P.b) + '" x2="' + (W - P.r) + '" y2="' + (H - P.b) + '" stroke="var(--line-strong)"/>'
+    + '<path d="' + area + '" fill="var(--c-coins)" opacity=".13"/>'
+    + '<path d="' + coinLine + '" fill="none" stroke="var(--c-coins)" stroke-width="1.2" opacity=".7"/>'
+    + '<path d="' + poolLine + '" fill="none" stroke="var(--c-pool)" stroke-width="1.4" stroke-dasharray="4 3"/>'
+    + '<line x1="' + P.l + '" y1="' + py + '" x2="' + (W - P.r) + '" y2="' + py + '" stroke="var(--c-posted)" stroke-width="1" stroke-dasharray="2 4"/>'
+    + '<text x="' + (P.l + 6) + '" y="' + (py - 5) + '" font-size="10" fill="var(--c-posted)">posted ' + cpi(run.pricing.postedPrice) + '</text>'
+    + '<path d="' + cpiLine + '" fill="none" stroke="var(--c-cpi)" stroke-width="2.2" stroke-linejoin="round"/>'
+    + '<line x1="' + playX + '" y1="' + P.t + '" x2="' + playX + '" y2="' + (H - P.b) + '" stroke="var(--ink)" opacity=".25"/>'
+    + '<line id="hoverLine" x1="0" x2="0" y1="' + P.t + '" y2="' + (H - P.b) + '" stroke="var(--ink)" opacity="0"/>'
+    + dayTicks.join('');
+}
+
+// Hover read-out for any played hour.
+$('chart').addEventListener('mousemove', (e) => {
+  if (!run || !cursor) return;
+  const svg = $('chart');
+  const box = svg.getBoundingClientRect();
+  const vx = ((e.clientX - box.left) / box.width) * G.W;
+  const { X } = scales();
+  const n = run.timeline.length;
+  const i = Math.round(((vx - G.P.l) / (G.W - G.P.l - G.P.r)) * (n - 1));
+  if (i < 0 || i >= Math.min(cursor, n)) return hideTip();
+  const h = run.timeline[i];
+  const line = document.getElementById('hoverLine');
+  line.setAttribute('x1', X(i)); line.setAttribute('x2', X(i)); line.setAttribute('opacity', '.5');
+  const tip = $('tip');
+  tip.innerHTML = '<b>Day ' + h.day + ' · hour ' + h.hour + '</b><br>'
+    + '<i style="background:var(--c-coins)"></i>coins ' + coins(h.coins) + '<br>'
+    + '<i style="background:var(--c-cpi)"></i>est. CPI ' + cpi(h.estimatedCpi) + '<br>'
+    + '<i style="background:var(--c-pool)"></i>pool split ' + (h.coins > 0 ? cpi(run.campaign.budget / h.coins) : '—') + '<br>'
+    + 'live publishers ' + h.live;
+  tip.style.left = ((X(i) / G.W) * box.width) + 'px';
+  tip.style.top = '6px';
+  tip.classList.remove('hidden');
+});
+$('chart').addEventListener('mouseleave', hideTip);
+function hideTip() {
+  $('tip').classList.add('hidden');
+  const line = document.getElementById('hoverLine');
+  if (line) line.setAttribute('opacity', '0');
+}
+
+function showResult() {
+  const s = run.settlement;
+  const c = run.campaign;
+  $('resultCard').classList.remove('hidden');
+  $('healBadge').textContent = s.healed ? 'healed' : (s.fullyDeployed ? 'budget fully deployed' : 'settled');
+  $('healBadge').className = 'pill ' + (s.healed ? 'warn' : 'good');
+
+  const joined = run.publishers.filter((p) => p.joined);
+  const covered = joined.filter((p) => p.coveredAsk).length;
+  const pctRefund = ((s.refund / c.budget) * 100).toFixed(0);
+  const pctPaid = ((s.disbursed / c.budget) * 100).toFixed(0);
+
+  $('finalStats').innerHTML =
+    stat('CPI resolved', cpi(s.cpi), { cls: 'hero good', sub: 'one price for every coin' }) +
+    stat('coins minted', coins(s.minted), { cls: 'hero accent', sub: coins(c.targetCoins) + ' targeted at expected CPI' }) +
+    stat('paid to publishers', money(s.disbursed), { cls: 'hero', sub: pctPaid + '% of budget' }) +
+    stat('refunded to you', money(s.refund), { cls: 'hero warn', sub: pctRefund + '% of budget' });
+
+  // Verdict
+  const box = $('verdictBox');
+  let icon, title, text, tone;
+  if (s.minted === 0) {
+    tone = 'neutral'; icon = '∅'; title = 'Nobody took the campaign';
+    text = 'No publisher joined at the posted price, so the whole budget comes back to you.';
+  } else if (s.healed) {
+    tone = 'warn'; icon = '⚕'; title = 'Thin market, healed';
+    text = 'Supply ran out before the budget did. Splitting the pool would have paid ' + cpi(s.poolSplit)
+      + ' per impression, and paying more than that buys nothing extra. The campaign settled at ' + cpi(s.cpi)
+      + ' instead, and ' + money(s.refund) + ' (' + pctRefund + '% of the budget) came back to you.';
+  } else {
+    tone = 'good'; icon = '✓'; title = 'Budget fully absorbed';
+    text = 'Supply soaked up the whole budget at ' + cpi(s.cpi) + ' per impression'
+      + (run.truth ? ', against a true competitive price of ' + cpi(run.truth) + ' (' + errText(s.cpi, run.truth) + ')' : '') + '. Nothing to refund.';
+  }
+  box.className = 'verdict ' + tone;
+  $('verdictIcon').textContent = icon;
+  $('verdictTitle').textContent = title;
+  $('verdict').textContent = text;
+
+  // Budget split
+  $('splitBar').innerHTML = '<div style="width:' + pctPaid + '%;background:var(--c-cpi)"></div><div style="width:' + pctRefund + '%;background:var(--c-pool)"></div>';
+  $('splitLegend').innerHTML = '<span><i class="key" style="background:var(--c-cpi)"></i>paid ' + money(s.disbursed) + '</span>'
+    + '<span><i class="key" style="background:var(--c-pool)"></i>refunded ' + money(s.refund) + '</span>'
+    + '<span>of ' + money(c.budget) + '</span>';
+
+  // Price comparison
+  const rows = [
+    { name: 'Your expected CPI', value: c.expectedCpi, label: cpi(c.expectedCpi), color: 'var(--c-posted)' },
+    { name: 'Posted price', value: run.pricing.postedPrice, label: cpi(run.pricing.postedPrice), color: 'var(--accent)' },
+    { name: 'CPI resolved', value: s.cpi, label: cpi(s.cpi), color: 'var(--c-cpi)' },
+  ];
+  if (run.truth) rows.push({ name: 'True competitive CPI', value: run.truth, label: cpi(run.truth), color: 'var(--c-truth)' });
+  if (s.poolSplit) rows.push({ name: 'Pool split B/M', value: s.poolSplit, label: cpi(s.poolSplit), color: 'var(--c-pool)' });
+  // Scale to the market prices; a runaway pool split just fills its bar.
+  const scaleTo = Math.max(...rows.filter((r) => r.name !== 'Pool split B/M').map((r) => r.value)) * 1.25;
+  $('priceBars').innerHTML = UI.hbars(rows, scaleTo);
+
+  // Publisher outcome
+  const top5 = joined.slice().sort((a, b) => b.payout - a.payout).slice(0, 5).reduce((a, p) => a + p.payout, 0);
+  $('pubStats').innerHTML =
+    stat('joined', joined.length + ' / ' + run.publishers.length, { sub: 'of all who arrived' }) +
+    stat('ask met', joined.length ? covered + ' / ' + joined.length : '—', { sub: 'settled CPI ≥ their hidden ask' }) +
+    stat('top-5 share', s.disbursed ? Math.round((top5 / s.disbursed) * 100) + '%' : '—', { sub: 'of all payouts' });
+  $('topBody').innerHTML = joined.length
+    ? joined.slice().sort((a, b) => b.payout - a.payout).slice(0, 8).map((p) =>
+        '<tr><td>' + p.name + '</td><td>' + cpi(p.reservation) + '</td><td>' + coins(p.coins) + '</td><td>' + money(p.payout) + '</td><td>'
+        + (p.coveredAsk ? '<span class="pill good">yes</span>' : '<span class="pill bad">no</span>') + '</td></tr>').join('')
+    : '<tr><td colspan="5" class="empty">No publishers joined.</td></tr>';
+}
+
+function errText(v, truth) {
+  const d = ((v - truth) / truth) * 100;
+  return (d >= 0 ? '+' : '') + d.toFixed(1) + '% vs truth';
+}
+
+function shareUrl() {
+  const q = new URLSearchParams({ budget: $('budget').value, cpi: $('cpi').value, days: $('days').value, market: archetype, seed: $('seed').value });
+  return location.origin + location.pathname + '?' + q.toString();
+}
+
+// Prefill from a shared link.
+(function fromQuery() {
+  const q = new URLSearchParams(location.search);
+  if (q.get('budget')) $('budget').value = q.get('budget');
+  if (q.get('cpi')) $('cpi').value = q.get('cpi');
+  if (q.get('days')) $('days').value = q.get('days');
+  if (q.get('seed')) $('seed').value = q.get('seed');
+  if (q.get('market') && ARCH.some(([id]) => id === q.get('market'))) archetype = q.get('market');
+})();
+
+for (const b of document.querySelectorAll('.preset')) {
+  b.onclick = () => {
+    const [bud, c, d] = b.dataset.p.split(',');
+    $('budget').value = bud; $('cpi').value = c; $('days').value = d;
+    renderDerived();
+  };
+}
+for (const id of ['budget', 'cpi', 'days']) $(id).addEventListener('input', renderDerived);
+for (const id of ['budget', 'cpi', 'days', 'seed']) $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') start(); });
+
+$('runBtn').onclick = start;
+$('playBtn').onclick = () => (playing ? stop() : (cursor >= run.timeline.length ? restart() : play()));
+$('restartBtn').onclick = restart;
+$('endBtn').onclick = () => { cursor = run.timeline.length; finish(); };
+$('speed').onchange = () => { if (playing) play(); };
+$('rerollBtn').onclick = () => { $('seed').value = UI.newSeed(); start(); };
+$('copyBtn').onclick = async () => {
+  try { await navigator.clipboard.writeText(shareUrl()); $('copyBtn').textContent = '✓ Copied'; }
+  catch { prompt('Copy this link', shareUrl()); }
+  setTimeout(() => { $('copyBtn').textContent = '🔗 Copy link to this run'; }, 1600);
+};
+$('jsonBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify(run, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'campaign-seed-' + run.campaign.seed + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+renderArchetypes();
+renderDerived();
+</script>
+</body>
+</html>

@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Publisher Game</title>
+<link rel="stylesheet" href="/app.css">
+<script src="/app.js"></script>
+<style>
+:root {
+  --bg:      #0b0d12;
+  --surf:    #12151d;
+  --surf2:   #1a1f2c;
+  --border:  #222839;
+  --ink:     #dde4f0;
+  --muted:   #525f7a;
+  --reach:   #4f8ef7;
+  --push:    #a459f5;
+  --stretch: #f0982a;
+  --win:     #22c55e;
+  --warn:    #f59e0b;
+  --danger:  #ef4444;
+  --r: 14px;
+  --font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.55 var(--font);
+  padding: 0 16px 80px;
+  -webkit-font-smoothing: antialiased;
+}
+.hidden { display: none !important; }
+
+/* ── screens ── */
+#screen-lobby  { max-width: 720px; margin: 0 auto; padding-top: 52px; }
+#themeBtn { display: none; }
+.pub-doc { display: inline-flex; gap: 6px; font-size: 12.5px; color: var(--muted); border: 1px solid var(--border); border-radius: 99px; padding: 3px 10px; text-decoration: none; }
+.pub-doc:hover { color: var(--ink); border-color: var(--reach); text-decoration: none; }
+.ladder-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+.ladder-head .ladder-eyebrow { margin-bottom: 0; }
+#screen-game   { max-width: 640px; margin: 0 auto; padding-top: 32px; }
+#screen-result { max-width: 480px; margin: 0 auto; padding-top: 100px; text-align: center; }
+
+/* ══════════ LOBBY ══════════ */
+.lobby-eyebrow {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .14em; color: var(--reach); margin-bottom: 10px;
+}
+.lobby-title {
+  font-size: 30px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 6px;
+}
+.lobby-sub {
+  color: var(--muted); font-size: 14px; margin-bottom: 36px; max-width: 52ch;
+}
+.offers-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;
+}
+.offer-card {
+  background: var(--surf); border: 1px solid var(--border); border-radius: var(--r);
+  padding: 22px 20px 18px; display: flex; flex-direction: column; gap: 14px;
+  position: relative; overflow: hidden;
+}
+.offer-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 2px; background: var(--reach); opacity: 0; transition: opacity .2s;
+}
+.offer-card:hover::before { opacity: 1; }
+.offer-name { font-size: 17px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; }
+.offer-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  font-size: 11.5px; font-weight: 500; padding: 3px 10px; border-radius: 99px;
+  background: var(--surf2); color: var(--muted); border: 1px solid var(--border);
+}
+.join-btn {
+  margin-top: 4px; width: 100%; padding: 12px;
+  background: var(--reach); color: #fff; border: none;
+  border-radius: 10px; font: 600 14.5px var(--font);
+  cursor: pointer; letter-spacing: .01em;
+  transition: opacity .15s, transform .1s;
+}
+.join-btn:hover { opacity: .88; transform: translateY(-1px); }
+.join-btn:active { transform: translateY(0); opacity: 1; }
+
+/* ══════════ GAME ══════════ */
+.game-top {
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 10px; margin-bottom: 8px;
+}
+.camp-name { font-size: 19px; font-weight: 700; letter-spacing: -.02em; }
+.camp-day  { font-size: 13px; color: var(--muted); }
+
+/* Mode toggle */
+.mode-toggle {
+  display: flex; background: var(--surf); border: 1px solid var(--border);
+  border-radius: 9px; padding: 3px; gap: 3px; flex-shrink: 0;
+}
+.mode-btn {
+  padding: 5px 13px; border: none; border-radius: 6px; background: transparent;
+  color: var(--muted); font: 600 12px var(--font); cursor: pointer;
+  letter-spacing: .03em; transition: background .15s, color .15s;
+}
+.mode-btn.active { background: var(--surf2); color: var(--ink); }
+.mode-btn.active.rungs-active { background: rgba(240,152,42,.18); color: var(--stretch); }
+
+.progress-track {
+  height: 4px; background: var(--surf2); border-radius: 99px;
+  overflow: hidden; margin-bottom: 26px;
+}
+.progress-fill {
+  height: 100%; background: var(--reach); border-radius: 99px;
+  transition: width .5s cubic-bezier(.4,0,.2,1);
+}
+
+/* key stats */
+.key-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 28px; }
+.kstat {
+  background: var(--surf); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 14px 12px; text-align: center;
+  transition: border-color .2s;
+}
+.kstat.rungs-mode { border-color: rgba(240,152,42,.3); }
+.kstat-val { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.03em; line-height: 1.1; }
+.kstat-lbl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 5px; }
+
+/* ease note */
+.ease-note {
+  font-size: 12.5px; color: var(--warn);
+  background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.18);
+  border-radius: 8px; padding: 8px 12px; margin-bottom: 14px;
+}
+
+/* ── LADDER ── */
+.ladder-eyebrow {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .12em; color: var(--muted); margin-bottom: 14px;
+}
+.ladder { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: end; margin-bottom: 26px; }
+
+.rung {
+  border-radius: 14px; padding: 18px 15px 15px;
+  display: flex; flex-direction: column;
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: transform .12s, box-shadow .2s, border-color .2s;
+  user-select: none;
+}
+.rung:active { transform: scale(.97); }
+.rung.r0 { min-height: 168px; }
+.rung.r1 { min-height: 200px; }
+.rung.r2 { min-height: 232px; }
+
+.rung.r0 { background: rgba(79,142,247,.08);  border: 1.5px solid rgba(79,142,247,.3); }
+.rung.r1 { background: rgba(164,89,245,.07);  border: 1.5px solid rgba(164,89,245,.2); }
+.rung.r2 { background: rgba(240,152,42,.07);  border: 1.5px solid rgba(240,152,42,.18); }
+.rung.r0:hover { box-shadow: 0 0 0 2px rgba(79,142,247,.45), 0 8px 24px rgba(79,142,247,.12); border-color: rgba(79,142,247,.7); }
+.rung.r1:hover { box-shadow: 0 0 0 2px rgba(164,89,245,.35), 0 8px 20px rgba(164,89,245,.08); border-color: rgba(164,89,245,.55); }
+.rung.r2:hover { box-shadow: 0 0 0 2px rgba(240,152,42,.3),  0 8px 20px rgba(240,152,42,.08); border-color: rgba(240,152,42,.5); }
+
+.rung::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 3px; border-radius: 14px 14px 0 0;
+}
+.rung.r0::before { background: var(--reach); }
+.rung.r1::before { background: var(--push); }
+.rung.r2::before { background: var(--stretch); }
+
+.rung-label {
+  font-size: 10.5px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .13em; margin-bottom: 10px;
+}
+.rung.r0 .rung-label { color: var(--reach); }
+.rung.r1 .rung-label { color: var(--push); }
+.rung.r2 .rung-label { color: var(--stretch); }
+
+/* Cumulative total — big hero number */
+.rung-total {
+  font-size: 36px; font-weight: 900; font-variant-numeric: tabular-nums;
+  letter-spacing: -.04em; line-height: 1;
+}
+.rung.r0 .rung-total { font-size: 40px; }
+
+.rung-unit { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+.rung-delta { font-size: 11px; font-weight: 400; color: var(--muted); }
+
+/* Reward */
+.rung-reward {
+  margin-top: auto; padding-top: 14px;
+}
+.rung-reward-amount {
+  font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--win);
+}
+.rung-reward-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.rung-reward-amount.sat-msg { font-size: 12px; font-weight: 600; color: var(--muted); line-height: 1.4; }
+
+/* In RUNGS mode, reward label changes */
+.rung-tap { font-size: 10px; color: var(--muted); margin-top: 8px; opacity: .55; }
+
+/* ── Champion banner (all rungs saturated) ── */
+.champion-wrap {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: 18px; padding: 32px 24px;
+  background: linear-gradient(135deg, rgba(79,142,247,.1) 0%, rgba(164,89,245,.1) 50%, rgba(240,152,42,.1) 100%);
+  border: 1.5px solid rgba(164,89,245,.35);
+  text-align: center; margin-bottom: 26px;
+  animation: champIn .4s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes champIn {
+  from { opacity: 0; transform: scale(.93); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.champion-crown { font-size: 44px; margin-bottom: 8px; line-height: 1; }
+.champion-title {
+  font-size: 22px; font-weight: 900; letter-spacing: -.02em;
+  background: linear-gradient(90deg, #4f8ef7, #a459f5, #f0982a);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+}
+.champion-sub {
+  font-size: 13px; color: var(--muted); line-height: 1.5; max-width: 280px;
+}
+.champion-payout {
+  margin-top: 20px; font-size: 32px; font-weight: 900;
+  font-variant-numeric: tabular-nums; color: var(--win);
+}
+.champion-payout-lbl { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .1em; margin-top: 4px; }
+
+/* ── input ── */
+.input-area { margin-bottom: 10px; }
+.input-label {
+  display: block; font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--muted); margin-bottom: 6px;
+}
+.input-row { display: flex; gap: 10px; }
+.imp-input {
+  flex: 1; height: 60px; padding: 0 16px; font: 700 24px var(--font);
+  font-variant-numeric: tabular-nums; color: var(--ink);
+  background: var(--surf); border: 1.5px solid var(--border);
+  border-radius: 11px; outline: none; transition: border-color .15s; min-width: 0;
+}
+.imp-input:focus { border-color: var(--reach); }
+.imp-input::placeholder { color: var(--muted); font-weight: 400; font-size: 18px; }
+.submit-btn {
+  padding: 0 26px; height: 60px; background: var(--reach);
+  color: #fff; border: none; border-radius: 11px;
+  font: 700 15px var(--font); cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  transition: opacity .15s, transform .1s; letter-spacing: .01em;
+}
+.submit-btn:hover { opacity: .88; transform: translateY(-1px); }
+.submit-btn:active { opacity: 1; transform: translateY(0); }
+.submit-btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+.settle-link {
+  display: block; text-align: center; margin-top: 12px; font-size: 13px;
+  color: var(--muted); cursor: pointer; background: none;
+  border: none; width: 100%; padding: 6px; border-radius: 7px;
+  transition: color .15s, background .15s;
+}
+.settle-link:hover { color: var(--ink); background: var(--surf2); }
+
+/* feedback */
+.feedback {
+  border-radius: 10px; padding: 11px 14px; font-size: 14px; font-weight: 500;
+  margin-top: 12px; border: 1px solid transparent;
+}
+.feedback.win  { background: rgba(34,197,94,.09); border-color: rgba(34,197,94,.25); color: var(--win); }
+.feedback.miss { background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.22); color: var(--warn); }
+.feedback.bad  { background: rgba(239,68,68,.08);  border-color: rgba(239,68,68,.2);  color: #f87171; }
+
+/* step log */
+.step-log { margin-top: 18px; display: flex; flex-direction: column; gap: 1px; }
+.log-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 2px; font-size: 12.5px; color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+.log-row:last-child { border-bottom: none; }
+.log-badge {
+  font-size: 11.5px; font-weight: 700; padding: 2px 8px;
+  border-radius: 99px; letter-spacing: .03em;
+}
+.log-badge.hit  { background: rgba(34,197,94,.1);  color: var(--win); }
+.log-badge.miss { background: rgba(245,158,11,.1); color: var(--warn); }
+.log-badge.bad  { background: rgba(239,68,68,.1);  color: #f87171; }
+
+.err { font-size: 12.5px; color: #f87171; min-height: 1em; margin-top: 6px; }
+
+/* ══════════ RESULT ══════════ */
+.result-eyebrow {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .14em; color: var(--muted); margin-bottom: 20px;
+}
+.final-cpi { font-size: 15px; color: var(--muted); margin-bottom: 4px; }
+.final-cpi strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.payout-hero {
+  font-size: 72px; font-weight: 900; font-variant-numeric: tabular-nums;
+  letter-spacing: -.05em; line-height: 1; margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--ink) 60%, var(--reach));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.payout-hero.rungs-color {
+  background: linear-gradient(135deg, var(--ink) 60%, var(--stretch));
+  -webkit-background-clip: text; background-clip: text;
+}
+.result-sub {
+  font-size: 13px; color: var(--muted); max-width: 40ch;
+  margin: 0 auto 36px; line-height: 1.65;
+}
+.result-both {
+  display: flex; gap: 20px; justify-content: center; margin-bottom: 36px;
+}
+.result-cell { text-align: center; }
+.result-cell-val { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.result-cell-val.dim { color: var(--muted); font-size: 22px; }
+.result-cell-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 4px; }
+.divider { width: 1px; background: var(--border); }
+.again-btn {
+  padding: 14px 32px; background: var(--surf); border: 1.5px solid var(--border);
+  border-radius: 12px; color: var(--ink); font: 600 15px var(--font);
+  cursor: pointer; transition: border-color .15s, background .15s;
+}
+.again-btn:hover { border-color: var(--reach); background: var(--surf2); }
+
+@media (max-width: 520px) {
+  .ladder { grid-template-columns: 1fr; }
+  .rung { min-height: 0 !important; }
+  .rung.r0 .rung-total { font-size: 34px; }
+  .key-stats { grid-template-columns: 1fr 1fr; }
+  .kstat:nth-child(3) { grid-column: 1 / -1; }
+  .payout-hero { font-size: 52px; }
+  .game-top { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+<nav id="topnav"></nav>
+
+<!-- ── LOBBY ── -->
+<div id="screen-lobby">
+  <div class="lobby-eyebrow">Publisher dashboard</div>
+  <h1 class="lobby-title">Pick a campaign</h1>
+  <p class="lobby-sub">Join, deliver impressions every six hours, and climb the ladder. <a class="pub-doc" href="/docs.html#ladder">How the ladder works →</a></p>
+  <div class="offers-grid" id="offersGrid"></div>
+  <p class="err" id="lobbyErr"></p>
+</div>
+
+<!-- ── GAME ── -->
+<div id="screen-game" class="hidden">
+  <div class="game-top">
+    <div>
+      <div class="camp-name" id="campName"></div>
+      <div class="camp-day" id="campDay"></div>
+    </div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btnSmooth">Smooth</button>
+      <button class="mode-btn" id="btnRungs">Rungs only</button>
+    </div>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="key-stats">
+    <div class="kstat" id="earningsCard">
+      <div class="kstat-val" id="statEarnings">—</div>
+      <div class="kstat-lbl" id="statEarningsLbl">Earnings</div>
+    </div>
+    <div class="kstat">
+      <div class="kstat-val" id="statStreak">—</div>
+      <div class="kstat-lbl">Streak</div>
+    </div>
+    <div class="kstat">
+      <div class="kstat-val" id="statCoins">—</div>
+      <div class="kstat-lbl">My Impressions</div>
+    </div>
+  </div>
+
+  <div id="easeNote" class="ease-note hidden"></div>
+  <div class="ladder-head"><div class="ladder-eyebrow" id="ladderLabel">Targets — reach these totals this step</div><a class="pub-doc" href="/docs.html#ladder">? Rungs &amp; bar</a></div>
+  <div class="ladder" id="ladder"></div>
+
+  <div class="input-area">
+    <label class="input-label" for="impInput">Impressions you delivered</label>
+    <div class="input-row">
+      <input id="impInput" class="imp-input" type="number" min="0" placeholder="0">
+      <button class="submit-btn" id="submitBtn">Submit</button>
+    </div>
+  </div>
+  <button class="settle-link" id="settleBtn">End campaign early</button>
+  <p class="err" id="gameErr"></p>
+
+  <div id="feedback" class="feedback hidden"></div>
+  <div class="step-log" id="stepLog"></div>
+</div>
+
+<!-- ── RESULT ── -->
+<div id="screen-result" class="hidden">
+  <div class="result-eyebrow" id="resultEyebrow">Campaign settled</div>
+  <div class="final-cpi" id="finalCpi"></div>
+  <div class="payout-hero" id="payoutHero"></div>
+  <!-- smooth mode: just sub text -->
+  <p class="result-sub" id="resultSub"></p>
+  <!-- rungs mode: side-by-side -->
+  <div class="result-both hidden" id="resultBoth">
+    <div class="result-cell">
+      <div class="result-cell-val" id="resultBanked"></div>
+      <div class="result-cell-lbl">Rung earnings</div>
+    </div>
+    <div class="divider"></div>
+    <div class="result-cell">
+      <div class="result-cell-val dim" id="resultMarket"></div>
+      <div class="result-cell-lbl">Market settlement</div>
+    </div>
+  </div>
+  <button class="again-btn" id="againBtn">Play another campaign</button>
+</div>
+
+<script>
+'use strict';
+
+/* ── helpers ── */
+const $ = id => document.getElementById(id);
+const money  = n => '$' + Math.round(Number(n)).toLocaleString();
+const money2 = n => '$' + Number(n).toFixed(2);
+const num    = n => Math.round(Number(n)).toLocaleString();
+
+/* Round to clean whole numbers for display */
+function round(n) {
+  if (n <= 0)    return 0;
+  if (n < 10)    return Math.ceil(n);          // 1-9: never round down to 0
+  if (n < 100)   return Math.round(n / 10) * 10;
+  if (n < 500)   return Math.round(n / 50) * 50;
+  if (n < 2000)  return Math.round(n / 100) * 100;
+  if (n < 10000) return Math.round(n / 500) * 500;
+  return           Math.round(n / 1000) * 1000;
+}
+
+function show(name) {
+  for (const s of ['lobby','game','result'])
+    $('screen-' + s).classList.toggle('hidden', s !== name);
+}
+
+/* ── State ── */
+let state          = null;
+let gameMode       = 'smooth';  // 'smooth' | 'rungs'
+let banked         = 0;         // cumulative rung earnings in rungs mode
+let pendingGains   = [];        // rung gains captured just before each submit
+
+/* ── API ── */
+async function api(path, method = 'GET', body) {
+  const res = await fetch(path, {
+    method,
+    headers: body ? { 'content-type': 'application/json' } : undefined,
+    body:    body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'request failed');
+  return data;
+}
+
+/* ══════════ LOBBY ══════════ */
+async function loadOffers() {
+  $('lobbyErr').textContent = '';
+  try {
+    const offers = await api('/api/game/offers');
+    $('offersGrid').innerHTML = offers.map(o => `
+      <div class="offer-card">
+        <div class="offer-name">${o.name}</div>
+        <div class="offer-chips">
+          <span class="chip">${o.durationDays} days</span>
+          <span class="chip">${o.totalSteps} steps</span>
+          <span class="chip">${o.archetypeLabel}</span>
+        </div>
+        <button class="join-btn" data-id="${o.id}">Join campaign →</button>
+      </div>
+    `).join('');
+    for (const btn of $('offersGrid').querySelectorAll('[data-id]'))
+      btn.onclick = () => join(btn.dataset.id);
+  } catch (e) { $('lobbyErr').textContent = e.message; }
+}
+
+async function join(offerId) {
+  try {
+    state  = await api('/api/game/join', 'POST', { offerId });
+    banked = 0;
+    $('stepLog').innerHTML = '';
+    $('feedback').classList.add('hidden');
+    syncModeButtons();
+    show('game');
+    render();
+  } catch (e) { $('lobbyErr').textContent = e.message; }
+}
+
+/* ══════════ GAME ══════════ */
+const RUNG_NAMES = ['REACH', 'PUSH', 'STRETCH'];
+const RUNG_CLS   = ['r0', 'r1', 'r2'];
+
+function syncModeButtons() {
+  const isRungs = gameMode === 'rungs';
+  $('btnSmooth').classList.toggle('active', !isRungs);
+  $('btnSmooth').classList.remove('rungs-active');
+  $('btnRungs').classList.toggle('active', isRungs);
+  $('btnRungs').classList.toggle('rungs-active', isRungs);
+  $('earningsCard').classList.toggle('rungs-mode', isRungs);
+}
+
+function render() {
+  if (state.status === 'settled') { showResult(); return; }
+
+  const s = state;
+  const c = s.campaign;
+  const isRungs = gameMode === 'rungs';
+
+  /* header */
+  $('campName').textContent = c.name;
+  $('campDay').textContent  = `Day ${s.day} of ${c.durationDays}  ·  Step ${s.step} / ${c.totalSteps}`;
+  $('progressFill').style.width = ((s.step / c.totalSteps) * 100).toFixed(1) + '%';
+
+  /* key stats */
+  $('statEarnings').textContent    = isRungs ? money(banked) : money(s.payoutIfStopNow);
+  $('statEarningsLbl').textContent = isRungs ? 'Banked' : 'Earnings';
+  $('statStreak').textContent      = s.streak >= 3 ? s.streak + ' 🔥' : (s.streak || '0');
+  $('statCoins').textContent        = num(s.coins);
+
+  /* ease note */
+  const en = $('easeNote');
+  if (s.atFloor) {
+    en.textContent = "You're at the floor — bar won't drop further.";
+    en.classList.remove('hidden');
+  } else if (s.mode === 'recovery') {
+    en.textContent = 'Recovery step — targets ease up this round.';
+    en.classList.remove('hidden');
+  } else {
+    en.classList.add('hidden');
+  }
+
+  /* ladder label */
+  $('ladderLabel').textContent = isRungs
+    ? 'Deliver this many impressions step — cross a rung to bank the reward'
+    : 'Deliver this many impressions this step';
+
+  /* Champion state: all rungs saturated — no point chasing the ladder */
+  const allSaturated = s.ladder.every(r => r.saturated);
+  if (allSaturated) {
+    const lockedPayout = s.ladder[0].cumulativeEarnings;   // all three are the same at saturation
+    $('ladderLabel').textContent = '';
+    $('ladder').innerHTML = `
+      <div class="champion-wrap">
+        <div class="champion-crown">👑</div>
+        <div class="champion-title">You're the Champion</div>
+        <div class="champion-sub">
+          You've locked up the maximum share of this campaign's budget.
+          Sit tight — your payout settles at the final market rate.
+        </div>
+        <div class="champion-payout">${money(Math.max(0, lockedPayout))}</div>
+        <div class="champion-payout-lbl">projected payout at settlement</div>
+      </div>`;
+    return;
+  }
+
+  /* ladder */
+  $('ladder').innerHTML = s.ladder.map((r, i) => {
+    // cumulativeCoins is the frozen cumulative target — the fixed total to reach.
+    // It only moves DOWN (softens) after misses, never up. Hero number = this target.
+    // need = remaining impressions = cumulativeCoins - s.coins (current position).
+    const cumTarget   = r.cumulativeCoins;       // frozen cumulative goal — never rises mid-chase
+    const remaining   = r.need;                  // impressions still to go = cumTarget - s.coins
+    // Math.ceil so 0.x impressions round up to 1, but we cap at remaining to never overshoot
+    const fillAmt     = Math.min(Math.ceil(remaining), remaining);  // exact — never overshoots
+    const rewardLabel = isRungs ? 'bank this step' : 'projected total';
+
+    return `
+      <div class="rung ${RUNG_CLS[i]}" data-fill="${fillAmt}">
+        <div class="rung-label">${RUNG_NAMES[i]}</div>
+        <div class="rung-total">${num(cumTarget)}</div>
+        <div class="rung-unit">
+          total impressions to reach<br>
+          <span class="rung-delta"><strong>${num(remaining)}</strong> more to go this step</span>
+        </div>
+        <div class="rung-reward">
+          <div class="rung-reward-amount">${money(Math.max(0, r.cumulativeEarnings))}</div>
+          <div class="rung-reward-label">${rewardLabel}</div>
+        </div>
+        <div class="rung-tap">tap → fills ${num(remaining)} in the box</div>
+      </div>`;
+  }).join('');
+
+  for (const rung of $('ladder').querySelectorAll('.rung'))
+    rung.onclick = () => { $('impInput').value = rung.dataset.fill; $('impInput').focus(); };
+}
+
+function showFeedback(last) {
+  const fb  = $('feedback');
+  const isRungs = gameMode === 'rungs';
+  fb.classList.remove('hidden', 'win', 'miss', 'bad');
+  let cls, txt;
+
+  if (last.cleared >= 3) {
+    cls = 'win';
+    txt = isRungs
+      ? `✓ STRETCH cleared — ${money(pendingGains[2] || 0)} banked this step.`
+      : `✓ All three rungs — ${num(last.impressions)} impressions. Exceptional.`;
+  } else if (last.cleared === 2) {
+    cls = 'win';
+    txt = isRungs
+      ? `✓ PUSH cleared — ${money(pendingGains[1] || 0)} banked this step.`
+      : `✓ REACH + PUSH — ${num(last.impressions)} impressions. Strong step.`;
+  } else if (last.cleared === 1) {
+    cls = 'win';
+    txt = isRungs
+      ? `✓ REACH cleared — ${money(pendingGains[0] || 0)} banked this step.`
+      : `✓ REACH cleared — ${num(last.impressions)} impressions. Streak intact.`;
+  } else if (last.nearMiss) {
+    cls = 'miss';
+    txt = isRungs
+      ? `Almost REACH — ${num(last.impressions)} vs ${num(last.target)}. Nothing banked, doesn't count against you.`
+      : `Almost — ${num(last.impressions)} vs ${num(last.target)}. Doesn't count against you.`;
+  } else if (last.froze) {
+    cls = 'miss';
+    txt = isRungs
+      ? `Missed — $0 banked. Streak frozen this once.`
+      : `Missed, but your streak is frozen for this step.`;
+  } else {
+    cls = 'bad';
+    txt = isRungs
+      ? `Missed REACH (got ${num(last.impressions)}, needed ${num(last.target)}) — $0 banked. Bar comes down.`
+      : `Missed ${num(last.target)} (got ${num(last.impressions)}). Bar comes down to meet you.`;
+  }
+  fb.className = 'feedback ' + cls;
+  fb.textContent = txt;
+}
+
+function addLogRow(last) {
+  const log     = $('stepLog');
+  const cleared = last.cleared;
+  const isRungs = gameMode === 'rungs';
+  const hit     = cleared >= 1;
+  const label   = cleared >= 3 ? 'STRETCH' : cleared === 2 ? 'PUSH' : cleared === 1 ? 'REACH' : 'missed';
+  const cls     = cleared >= 1 ? 'hit' : last.nearMiss ? 'miss' : 'bad';
+
+  const earned = isRungs
+    ? (cleared >= 1 ? money(pendingGains[cleared - 1] || 0) : '$0')
+    : num(last.impressions) + ' imp';
+
+  const row = document.createElement('div');
+  row.className = 'log-row';
+  row.innerHTML = `<span>${earned}</span><span class="log-badge ${cls}">${hit ? '✓ ' : ''}${label}</span>`;
+  log.insertBefore(row, log.firstChild);
+  while (log.children.length > 5) log.removeChild(log.lastChild);
+}
+
+async function submitStep() {
+  const impressions = Math.max(0, Number($('impInput').value) || 0);
+  $('gameErr').textContent = '';
+  $('submitBtn').disabled = true;
+
+  /* capture rung gains NOW, before the API changes state */
+  pendingGains = (state.ladder || []).map(r => Math.max(0, r.gain));
+
+  try {
+    state = await api('/api/game/' + state.id + '/step', 'POST', { impressions });
+
+    /* accumulate banked in rungs mode */
+    if (gameMode === 'rungs' && state.lastStep) {
+      const c = state.lastStep.cleared;
+      if (c >= 1) banked += pendingGains[c - 1] || 0;  // reward for highest rung crossed
+    }
+
+    $('impInput').value = '';
+    if (state.lastStep) { showFeedback(state.lastStep); addLogRow(state.lastStep); }
+    render();
+  } catch (e) { $('gameErr').textContent = e.message; }
+  $('submitBtn').disabled = false;
+}
+
+async function settleCampaign() {
+  $('gameErr').textContent = '';
+  try {
+    state = await api('/api/game/' + state.id + '/settle', 'POST', {});
+    showResult();
+  } catch (e) { $('gameErr').textContent = e.message; }
+}
+
+/* ══════════ RESULT ══════════ */
+function showResult() {
+  const f       = state.settlement;
+  const isRungs = gameMode === 'rungs';
+  show('result');
+
+  $('finalCpi').innerHTML = `Final price resolved: <strong>${money2(f.cpi)} per impression</strong>`;
+
+  if (isRungs) {
+    /* primary = banked rung earnings */
+    $('payoutHero').textContent = money(banked);
+    $('payoutHero').classList.add('rungs-color');
+    $('resultSub').classList.add('hidden');
+    $('resultBoth').classList.remove('hidden');
+    $('resultBanked').textContent = money(banked);
+    $('resultMarket').textContent = money(f.yourPayout);
+    $('resultEyebrow').textContent = 'Campaign settled · Rungs mode';
+  } else {
+    $('payoutHero').textContent = money(f.yourPayout);
+    $('payoutHero').classList.remove('rungs-color');
+    $('resultSub').classList.remove('hidden');
+    $('resultBoth').classList.add('hidden');
+    $('resultEyebrow').textContent = 'Campaign settled';
+    if (f.yourCoins === 0) {
+      $('resultSub').textContent = 'You delivered no impressions, so you earned nothing.';
+    } else if (f.healed) {
+      $('resultSub').textContent =
+        `Thin market — settled at ${money2(f.cpi)} rather than the pool split of ${money2(f.poolSplit)}. `
+        + `You held ${(f.yourShare * 100).toFixed(1)}% of all impressions.`;
+    } else {
+      $('resultSub').textContent =
+        `Budget fully absorbed. You held ${(f.yourShare * 100).toFixed(1)}% of all impressions in the market.`;
+    }
+  }
+}
+
+/* ── wiring ── */
+$('btnSmooth').onclick = () => { gameMode = 'smooth'; syncModeButtons(); render(); };
+$('btnRungs').onclick  = () => { gameMode = 'rungs';  syncModeButtons(); render(); };
+$('submitBtn').onclick = submitStep;
+$('settleBtn').onclick = settleCampaign;
+$('impInput').addEventListener('keydown', e => { if (e.key === 'Enter') submitStep(); });
+$('againBtn').onclick  = () => { show('lobby'); loadOffers(); };
+
+loadOffers();
+</script>
+</body>
+</html>

@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How It Works</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/app.css">
+<script src="/app.js"></script>
+<style>
+  .docs { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 28px; padding-top: 26px; }
+  @media (max-width: 860px) { .docs { grid-template-columns: 1fr; gap: 14px; } }
+  .tabs { position: sticky; top: 70px; align-self: start; display: flex; flex-direction: column; gap: 2px; }
+  .tabs-title { font-size: 11.5px; font-weight: 650; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px 10px; }
+  .tab {
+    text-align: left; background: none; border: 0; cursor: pointer; padding: 8px 10px; border-radius: 8px;
+    color: var(--ink-2); font: 500 14px var(--font); display: flex; gap: 10px; align-items: center;
+  }
+  .tab:hover { background: var(--bg-tint); color: var(--ink); }
+  .tab[aria-selected="true"] { background: var(--panel); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line), var(--shadow); font-weight: 600; }
+  .tab i { font-style: normal; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; background: var(--bg-tint); font-size: 12px; flex: 0 0 auto; }
+  .tab[aria-selected="true"] i { background: var(--accent-soft); color: var(--accent); }
+  @media (max-width: 860px) {
+    .tabs { position: static; flex-direction: row; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+    .tabs-title { display: none; }
+    .tab { white-space: nowrap; }
+  }
+
+  .panel { display: none; max-width: 800px; }
+  .panel.active { display: block; animation: fadeIn .25s ease both; }
+  .panel > header { margin-bottom: 22px; }
+  .panel h1 { font-size: 28px; }
+  .doc-sec { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 24px; margin-bottom: 16px; box-shadow: var(--shadow); scroll-margin-top: 80px; }
+  .doc-sec.flash { animation: flash 1.4s ease; }
+  @keyframes flash { 0% { box-shadow: 0 0 0 3px var(--accent); } 100% { box-shadow: var(--shadow); } }
+  .doc-sec h2 { font-size: 18px; margin: 0 0 4px; letter-spacing: -.01em; }
+  .doc-sec .where { font-size: 12.5px; color: var(--muted); margin: 0 0 14px; }
+  .doc-sec h4 { font-size: 14px; margin: 20px 0 6px; }
+  .doc-sec p, .doc-sec li { color: var(--ink-2); font-size: 14.5px; line-height: 1.65; }
+  .doc-sec p { margin: 0 0 12px; }
+  .doc-sec ul, .doc-sec ol { padding-left: 20px; margin: 0 0 12px; }
+  .doc-sec li { margin-bottom: 5px; }
+  .doc-sec b { color: var(--ink); }
+  .formula {
+    font-family: var(--mono); font-size: 13.5px; background: var(--panel-2); border: 1px solid var(--line);
+    border-left: 3px solid var(--accent); border-radius: 6px; padding: 12px 14px; margin: 4px 0 14px; overflow-x: auto; white-space: pre; color: var(--ink);
+  }
+  .plain { background: var(--accent-soft); border-radius: 8px; padding: 12px 14px; margin: 4px 0 14px; font-size: 14px; color: var(--ink-2); }
+  .plain::before { content: "In plain words · "; font-weight: 650; color: var(--accent); }
+  .example { background: var(--good-soft); border-radius: 8px; padding: 12px 14px; margin: 4px 0 14px; font-size: 14px; color: var(--ink-2); }
+  .example::before { content: "Example · "; font-weight: 650; color: var(--good); }
+  .caution { background: var(--warn-soft); border-radius: 8px; padding: 12px 14px; margin: 4px 0 14px; font-size: 14px; color: var(--ink-2); }
+  .caution::before { content: "Heads up · "; font-weight: 650; color: var(--warn); }
+  .doc-sec table { margin: 6px 0 14px; }
+  .doc-sec td, .doc-sec th { white-space: normal; text-align: left; vertical-align: top; }
+  .doc-sec td:not(:first-child), .doc-sec th:not(:first-child) { text-align: left; }
+  .loop { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; margin: 8px 0 16px; counter-reset: s; }
+  .loop div { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 12.5px; color: var(--ink-2); position: relative; }
+  .loop div::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 700; margin-bottom: 6px; }
+  .loop div b { display: block; font-size: 13px; margin-bottom: 2px; }
+  .loop div.back { border-style: dashed; border-color: var(--accent); }
+  .toc { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .toc a { font-size: 12.5px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 99px; color: var(--ink-2); background: var(--panel); }
+  .toc a:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+  .swatch { display: inline-block; width: 11px; height: 11px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; }
+  .back-link { font-size: 13px; }
+</style>
+</head>
+<body>
+<nav id="topnav"></nav>
+<div class="page docs">
+  <aside>
+    <div class="tabs" role="tablist" id="tabs">
+      <p class="tabs-title">Documentation</p>
+      <button class="tab" role="tab" data-tab="t-overview"><i>◎</i>Overview</button>
+      <button class="tab" role="tab" data-tab="t-pricing"><i>∿</i>Curve & pricing</button>
+      <button class="tab" role="tab" data-tab="t-settle"><i>$</i>Settlement</button>
+      <button class="tab" role="tab" data-tab="t-campaign"><i>1</i>Campaign simulator</button>
+      <button class="tab" role="tab" data-tab="t-market"><i>2</i>Market simulator</button>
+      <button class="tab" role="tab" data-tab="t-ladder"><i>▲</i>Publisher ladder</button>
+      <button class="tab" role="tab" data-tab="t-more"><i>+</i>More & under the hood</button>
+    </div>
+  </aside>
+
+  <main>
+    <!-- ════════════ OVERVIEW ════════════ -->
+    <section class="panel" id="t-overview">
+      <header>
+        <p class="eyebrow">Overview</p>
+        <h1>How the CPI market works</h1>
+        <p class="lede">A plain-language tour of the mechanism and of every page in this app. Each "How this works" link in the app jumps straight to the matching section here.</p>
+        <div class="toc"><a href="#overview">Big picture</a><a href="#lifecycle">Lifecycle</a><a href="#pages">The pages</a><a href="#colors">Chart colours</a></div>
+      </header>
+
+      <div class="doc-sec" id="overview">
+        <h2>The big picture</h2>
+        <p class="where">Used on: every page</p>
+        <p>An <b>advertiser</b> puts a fixed <b>budget</b> <code>B</code> into a pool. <b>Publishers</b> join the campaign and put content up. Every verified impression they deliver <b>mints one coin</b>. When the campaign closes, every coin is paid <b>the same price</b>, and any budget that wasn't needed goes back to the advertiser.</p>
+        <p>Nobody sets the price per impression (CPI) by hand. The obvious approach is to split the pool: divide the budget by the coins minted (<code>B / M</code>). That works when supply is plentiful, but it breaks badly when few publishers turn up:</p>
+        <div class="example">$100,000 budget, only 5,000 impressions delivered. The pool split pays <b>$20 per impression</b> for supply that would happily have taken $3. The advertiser massively overpays for a thin market.</div>
+        <p>This mechanism fixes that by <b>learning the price across campaigns</b>. Every finished campaign records one fact: <i>"at this posted price, the market delivered this many coins."</i> Pooled together, those facts trace a <b>supply curve</b>, and the next campaign is priced from it.</p>
+        <div class="plain">One campaign alone can't tell whether "no coins" means "the price was too low" or "nobody was around". Hundreds of campaigns together can.</div>
+      </div>
+
+      <div class="doc-sec" id="lifecycle">
+        <h2>The lifecycle of a campaign</h2>
+        <p class="where">Used on: Live market, both simulators</p>
+        <div class="loop">
+          <div><b>Fund</b>Advertiser sets budget, duration and a wanted CPI.</div>
+          <div><b>Post price</b>The platform reads the learned curve and posts one price.</div>
+          <div><b>Join</b>Publishers join if the deal beats their private ask. Joins are sticky.</div>
+          <div><b>Mint</b>1 impression = 1 coin. The estimated CPI can only fall.</div>
+          <div><b>Settle</b>Every coin is paid <code>min(posted, B/M)</code>. The rest is refunded.</div>
+          <div class="back"><b>Learn</b>(posted price, coins) is added to the curve for the next campaign.</div>
+        </div>
+        <p>Step 6 feeds back into step 2. That loop is where price discovery happens. <a href="#curve">How the curve learns →</a></p>
+      </div>
+
+      <div class="doc-sec" id="pages">
+        <h2>What each page is for</h2>
+        <table>
+          <thead><tr><th>Page</th><th>What it does</th><th>Read</th></tr></thead>
+          <tbody>
+            <tr><td><a href="/">Live market</a></td><td>The real API, running by hand. Create a campaign, join publishers, mint impressions, settle it, and watch the platform curve learn.</td><td><a href="#curve">Curve</a> · <a href="#settlement">Settlement</a></td></tr>
+            <tr><td><a href="/simulator.html">Campaign simulator</a></td><td><b>Endpoint 1.</b> One campaign on your own numbers, played hour by hour with simulated publishers.</td><td><a href="#campaign">Campaign sim</a></td></tr>
+            <tr><td><a href="/market.html">Market simulator</a></td><td><b>Endpoint 2.</b> A whole season of campaigns in one market, scored against the hidden true price.</td><td><a href="#market">Market sim</a></td></tr>
+            <tr><td><a href="/publisher.html">Publisher game</a></td><td>The publisher's side: deliver impressions in 6-hour steps and chase a three-rung target ladder.</td><td><a href="#ladder">Ladder</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-sec" id="colors">
+        <h2>Chart colours</h2>
+        <p class="where">Every chart uses the same colour for the same quantity.</p>
+        <table>
+          <tbody>
+            <tr><td><span class="swatch" style="background:var(--c-coins)"></span>Blue</td><td>Coins / impressions delivered</td></tr>
+            <tr><td><span class="swatch" style="background:var(--c-cpi)"></span>Teal</td><td>The mechanism's CPI: estimated during a run, settled at the end</td></tr>
+            <tr><td><span class="swatch" style="background:var(--c-truth)"></span>Violet</td><td>The true competitive CPI (hidden from the mechanism; simulators only)</td></tr>
+            <tr><td><span class="swatch" style="background:var(--c-pool)"></span>Amber</td><td>The pool split <code>B / M</code>, the naive benchmark, and refunds</td></tr>
+            <tr><td><span class="swatch" style="background:var(--c-posted)"></span>Grey dashed</td><td>The posted price</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ════════════ PRICING ════════════ -->
+    <section class="panel" id="t-pricing">
+      <header>
+        <p class="eyebrow">Mechanism · server/mechanism.js</p>
+        <h1>The supply curve & posting a price</h1>
+        <p class="lede">How past campaigns become a curve, and how the curve turns into the one price a new campaign posts.</p>
+        <div class="toc"><a href="#curve">Supply curve</a><a href="#pricing">Posting the price</a><a href="#warmup">Warm-up</a><a href="#exploration">Exploration</a><a href="#prices">Every "price" explained</a></div>
+      </header>
+
+      <div class="doc-sec" id="curve">
+        <h2>The supply curve</h2>
+        <p class="where">Shown on: Live market → Platform supply curve</p>
+        <p>Every settled campaign adds one <b>observation</b>: the price it posted and the coins it ended up minting. The grey dots on the chart are these observations. The blue line is a smoothed estimate of <b>"how many coins would a campaign get at price p?"</b></p>
+        <div class="formula">ĝ(p) = Σ coinsⱼ · wⱼ / Σ wⱼ
+wⱼ   = exp( −(ln pⱼ − ln p)² / (2 · 0.18²) )</div>
+        <div class="plain">To estimate supply at a price, take a weighted average of past campaigns, where campaigns priced close to it count most. A campaign priced 20% away gets about 60% weight, and one priced 50% away only about 8%.</div>
+        <p>It works in <b>log price</b>, so "20% higher" means the same thing at $0.50 as at $5. The curve is evaluated on 61 points spread evenly (in log terms) between the cheapest and the most expensive price ever observed.</p>
+        <h4>The plateau</h4>
+        <p>Once price is high enough, everyone available has already joined and supply stops growing. That flat top is the <b>plateau</b>. It's measured as the <b>median</b> of the curve over its highest-priced fifth, not its maximum, because the maximum of a noisy estimate is biased upward.</p>
+      </div>
+
+      <div class="doc-sec" id="pricing">
+        <h2>Posting the price: the two candidates</h2>
+        <p class="where">Shown on: Live market (dashed lines on the curve, "priced by" pill), both simulators ("posted" pill)</p>
+        <p>Given a budget <code>B</code>, the curve offers two sensible prices:</p>
+        <table>
+          <thead><tr><th>Candidate</th><th>Definition</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><b style="color:var(--c-pool)">Budget-exhaust</b> p<sub>x</sub></td><td>cheapest p where <code>p · ĝ(p) ≥ B</code></td><td>The lowest price at which delivery would use up the whole budget.</td></tr>
+            <tr><td><b style="color:var(--c-cpi)">Saturation</b> p<sub>s</sub></td><td>cheapest p where <code>ĝ(p) ≥ 0.95 × plateau</code></td><td>The lowest price that already buys essentially all the supply there is.</td></tr>
+          </tbody>
+        </table>
+        <div class="formula">posted price = min(p_x, p_s)</div>
+        <p>The pill shows which one won: <code>budget-exhausted</code> or <code>supply-saturated</code>.</p>
+        <div class="plain">Pay just enough to spend the budget, unless the market runs out of supply first. In that case, pay just enough to buy all of it. Paying more than the saturation price buys nothing extra.</div>
+        <div class="example">A thin market saturates at 20,000 coins around $3. At $3, 20,000 coins cost only $60k of a $100k budget, so the budget can never be exhausted. p<sub>s</sub> = $3 wins, and the advertiser gets $40k back instead of paying $5 per coin.</div>
+        <p>This <b>min</b> is the "healing" rule. Checking p<sub>x</sub> first and ignoring saturation would recreate the pool-split problem.</p>
+        <div class="caution">On the Live market chart, the two dashed markers are computed for a <b>$100,000</b> budget. A campaign with a different budget can get a different p<sub>x</sub>.</div>
+      </div>
+
+      <div class="doc-sec" id="warmup">
+        <h2>Warm-up: before the curve is trusted</h2>
+        <p class="where">Shown on: Live market ("warm-up n/15"), Market simulator (grey warm-up band)</p>
+        <p>The curve is only trusted once it has <b>15 observations</b>. Until then, the price is the advertiser's wanted CPI multiplied by a random factor between <b>e<sup>−2</sup> ≈ 0.14×</b> and <b>e<sup>2</sup> ≈ 7.4×</b>:</p>
+        <div class="formula">warm-up price = wantedCpi · exp( U[−2, 2] )</div>
+        <div class="plain">During warm-up the advertiser's guess only sets the centre of a very wide sweep. Even if the guess is off by 5×, the sweep still covers the real price, so the guess can't decide where the search looks.</div>
+        <p>After warm-up the wanted CPI is <b>completely ignored</b>. That's why quoting too high or too low can't steer the price in the long run (see the "Advertiser lowballs / highballs" markets).</p>
+        <p>The Market simulator additionally leaves the <b>first 40</b> campaigns out of its score, so the curve has time to settle before it's judged. <a href="#scoring">Scoring →</a></p>
+      </div>
+
+      <div class="doc-sec" id="exploration">
+        <h2>Exploration after warm-up</h2>
+        <p>If every campaign posted exactly the curve's price, the curve would never learn anything about other prices. So each new campaign is nudged a little:</p>
+        <table>
+          <tbody>
+            <tr><td><b>90% of campaigns</b></td><td>local: <code>p · exp(N(0, 0.1))</code>, roughly ±10% around the learned price</td></tr>
+            <tr><td><b>10% of campaigns</b></td><td>wide: <code>p · exp(U[−2, 2])</code>, anywhere from 0.14× to 7.4×</td></tr>
+          </tbody>
+        </table>
+        <div class="caution">This is why a campaign-simulator run sometimes posts a strangely high or low price: roughly 1 run in 10 is a deliberate wide exploration. Exploration is the cost of learning a curve nobody can observe directly.</div>
+      </div>
+
+      <div class="doc-sec" id="prices">
+        <h2>Every "price" in the app, explained</h2>
+        <table>
+          <thead><tr><th>Name</th><th>What it is</th></tr></thead>
+          <tbody>
+            <tr><td><b>Expected / wanted CPI</b></td><td>The advertiser's own guess. A warm-up prior only, never a cap or a floor.</td></tr>
+            <tr><td><b>Posted price</b> <code>p</code></td><td>The price the platform posts from the curve (plus exploration). It's the most any coin can be paid.</td></tr>
+            <tr><td><b>Estimated CPI</b></td><td>What a coin would be paid if the campaign closed right now: <code>min(p, B / coins so far)</code>. It can only fall.</td></tr>
+            <tr><td><b>Settled / resolved CPI</b> <code>c*</code></td><td>The final price every coin is paid: <code>min(p, B / M)</code>.</td></tr>
+            <tr><td><b>Pool split</b> <code>B / M</code></td><td>The naive benchmark: divide the budget by the coins. Settled CPI is never above it.</td></tr>
+            <tr><td><b>True competitive CPI</b></td><td>Simulators only. The price a perfectly informed auctioneer, one who could see every publisher's private ask, would set. <a href="#truth">How it's computed →</a></td></tr>
+            <tr><td><b>Saturation / budget-exhaust price</b></td><td>The two candidates read off the curve. <a href="#pricing">See above.</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ════════════ SETTLEMENT ════════════ -->
+    <section class="panel" id="t-settle">
+      <header>
+        <p class="eyebrow">Mechanism · server/mechanism.js, server/store.js</p>
+        <h1>Joining, minting & settlement</h1>
+        <p class="lede">The rules while a campaign is live, and how the money is divided when it closes.</p>
+        <div class="toc"><a href="#settlement">Settlement</a><a href="#healing">Healed vs fully deployed</a><a href="#rules">Lifecycle rules</a><a href="#guarantees">Guarantees</a></div>
+      </header>
+
+      <div class="doc-sec" id="settlement">
+        <h2>Settlement: one price for every coin</h2>
+        <p class="where">Shown on: Live market (Settle), Campaign simulator (Settlement card), Publisher game (result)</p>
+        <div class="formula">c* = min( posted price p ,  B / M )
+paid     D = c* · M        (each payout rounded down to the cent)
+refunded R = B − D</div>
+        <div class="plain">Every coin gets the same price: the posted price, unless there were so many coins that the budget can't cover them all, in which case the budget is split evenly. Whatever's left goes back to the advertiser.</div>
+        <div class="example"><b>Budget $100,000, posted $2.50.</b><br>
+          · 60,000 coins → B/M = $1.67, which is below $2.50 → c* = $1.67. All $100k is paid out, with no refund.<br>
+          · 10,000 coins → B/M = $10.00, which is above $2.50 → c* = $2.50. $25k is paid and <b>$75k is refunded</b>. The pool split would have paid $10 per coin.</div>
+        <p>While the campaign is running, the <b>estimated CPI</b> uses the same formula with the coins minted so far. More coins can only push it down, so a publisher's estimate never rises.</p>
+        <p>After settling, the campaign reports <code>(posted price, coins minted)</code> to the platform curve. <a href="#curve">That's how the curve learns.</a></p>
+      </div>
+
+      <div class="doc-sec" id="healing">
+        <h2>"Healed" vs "budget fully deployed"</h2>
+        <table>
+          <tbody>
+            <tr><td><span class="pill warn">healed</span></td><td>The posted price was the binding limit (<code>c* &lt; B/M</code>). Supply was too thin to absorb the budget, so publishers are paid the posted price and the remainder is refunded. The mechanism "healed" the thin market instead of charging the pool split.</td></tr>
+            <tr><td><span class="pill good">fully deployed</span></td><td>The budget was the binding limit (<code>c* = B/M</code>). Supply absorbed everything, so there's no refund.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-sec" id="rules">
+        <h2>Lifecycle rules (Live market)</h2>
+        <ul>
+          <li><b>Joining is sticky.</b> Content goes up and stays up. A publisher can't re-bid, withdraw or join twice.</li>
+          <li><b>Minting</b> needs a publisher that has joined and a positive number of impressions. 1 impression = 1 coin.</li>
+          <li><b>Settling happens once.</b> After that, joins and mints are refused.</li>
+          <li>The <b>duration</b> is stored with the campaign, but the Live market doesn't auto-close. You settle by hand.</li>
+        </ul>
+      </div>
+
+      <div class="doc-sec" id="guarantees">
+        <h2>Guarantees</h2>
+        <ul>
+          <li><b>Budget conservation:</b> paid + refunded = budget, to the cent. Nothing is ever overdrawn.</li>
+          <li><b>One price per coin</b>, whoever you are and whenever you joined.</li>
+          <li><b>Never above the pool split:</b> <code>c* ≤ B/M</code>.</li>
+          <li><b>Nothing to fake:</b> only minting is observed, and payouts are linear in coins, so splitting into many identities gains nothing.</li>
+          <li><b>Timing-immune:</b> the price is fixed for the campaign. Bursts, trickles and join order don't move it.</li>
+        </ul>
+        <p>These are enforced by the test suite (<code>npm test</code>). <a href="#limits">What it does <i>not</i> guarantee →</a></p>
+      </div>
+    </section>
+
+    <!-- ════════════ CAMPAIGN SIM ════════════ -->
+    <section class="panel" id="t-campaign">
+      <header>
+        <p class="eyebrow">Endpoint 1 · sim/campaign.js · POST /api/simulate/campaign</p>
+        <h1>Campaign simulator</h1>
+        <p class="lede">What happens when you press "Run campaign", step by step.</p>
+        <div class="toc"><a href="#campaign">The run</a><a href="#archetypes">Publisher markets</a><a href="#publishers">Simulated publishers</a><a href="#campaign-live">Reading the live view</a><a href="#campaign-result">Reading the result</a></div>
+      </header>
+
+      <div class="doc-sec" id="campaign">
+        <h2>What a run does</h2>
+        <ol>
+          <li><b>Seed the randomness.</b> The seed feeds a small deterministic generator. <a href="#seeds">About seeds</a></li>
+          <li><b>Pick the market</b> you chose. If you chose <i>Surprise me</i>, one of the six is picked at random and its numbers are jittered (supply ×e<sup>0.45·N</sup>, prices ×e<sup>0.3·N</sup>, publisher count ×e<sup>0.5·N</sup>).</li>
+          <li><b>Build a platform history.</b> A fresh curve is trained on <b>40 earlier campaigns</b> in the same market, with the same budget, CPI and duration and new publishers each time. This is why the posted price is a <i>learned</i> price rather than your expected CPI.</li>
+          <li><b>Post the price</b> from that curve, including normal <a href="#exploration">exploration</a>.</li>
+          <li><b>Create this campaign's publishers</b> and run it <b>hour by hour</b>.</li>
+          <li><b>Settle</b> with the real settlement code. <a href="#settlement">Settlement →</a></li>
+        </ol>
+        <h4>The hourly join rule</h4>
+        <p>Every hour, each new arrival and each still-patient waiting publisher asks: <i>"if I join now, what will I be paid?"</i></p>
+        <div class="formula">own      = my rate × hours left
+expected = min( posted price , B / (already committed + own) )
+join if expected ≥ my private ask</div>
+        <div class="plain">Publishers join only when the deal still beats their private price after accounting for everyone already in. Early joiners make the pool look more crowded to later arrivals, which is why a crowded market fills up and then stops.</div>
+        <p>Once in, a publisher mints at their rate every hour until the end. Publishers who decline wait for a while (their <i>patience</i>) and re-check each hour, then leave.</p>
+      </div>
+
+      <div class="doc-sec" id="archetypes">
+        <h2>Publisher markets (archetypes)</h2>
+        <p>Markets are defined <b>relative to your own campaign</b>, so "thin" means the same thing whatever budget you type. The <b>target volume</b> is <code>budget ÷ expected CPI</code>.</p>
+        <table>
+          <thead><tr><th>Market</th><th>Potential supply</th><th>Publisher asks</th><th>~Publishers</th><th>Arrivals</th></tr></thead>
+          <tbody>
+            <tr><td>Thin liquidity</td><td>0.25× target</td><td>1.5× your CPI</td><td>12</td><td>spread evenly</td></tr>
+            <tr><td>Balanced</td><td>1.2×</td><td>1.0×</td><td>60</td><td>spread evenly</td></tr>
+            <tr><td>Abundant</td><td>3.0×</td><td>0.6×</td><td>200</td><td>spread evenly</td></tr>
+            <tr><td>Early burst</td><td>1.2×</td><td>1.0×</td><td>60</td><td>70% in the first 4–9% of the window</td></tr>
+            <tr><td>Late rush</td><td>1.2×</td><td>1.0×</td><td>60</td><td>70% at 78–92% of the window</td></tr>
+            <tr><td>Premium supply</td><td>0.6×</td><td>2.0×</td><td>25</td><td>spread evenly</td></tr>
+          </tbody>
+        </table>
+        <div class="plain">Thin and Premium are designed to show healing and a refund. Abundant shows many cheap coins and a CPI well below your guess. The burst markets show that timing doesn't change the price, only the shape of the curve.</div>
+      </div>
+
+      <div class="doc-sec" id="publishers">
+        <h2>How simulated publishers are generated</h2>
+        <table>
+          <tbody>
+            <tr><td><b>Count</b></td><td>Random (Poisson) around the market's typical count</td></tr>
+            <tr><td><b>Private ask</b></td><td><code>expected CPI × price level × e<sup>0.3·N</sup></code>. Hidden from the mechanism.</td></tr>
+            <tr><td><b>Delivery rate</b></td><td>Sized so the whole market could deliver <i>supply × target</i> if everyone stayed ~55% of the window, then varied per publisher by e<sup>0.5·N</sup></td></tr>
+            <tr><td><b>Patience</b></td><td>Random, averaging 30% of the campaign length</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-sec" id="campaign-live">
+        <h2>Reading the live view</h2>
+        <table>
+          <tbody>
+            <tr><td><b>Publishers live</b></td><td>How many have joined and are minting</td></tr>
+            <tr><td><b>Coins minted</b></td><td>Impressions delivered so far</td></tr>
+            <tr><td><b>Estimated CPI</b></td><td><code>min(posted, B / coins)</code>. It only ever falls.</td></tr>
+            <tr><td><b>Committed</b></td><td>coins × estimated CPI: what would be paid out if the campaign closed now</td></tr>
+            <tr><td><b>Refund if closed now</b></td><td>Budget − committed</td></tr>
+            <tr><td><b>Minting rate / h</b></td><td>Combined delivery rate of all live publishers</td></tr>
+          </tbody>
+        </table>
+        <p>On the chart, the <b>teal</b> line (estimated CPI) sits flat on the grey posted line while supply is scarce. It bends down only once the <b>amber</b> pool split falls below the posted price. That crossing is the moment the budget starts to bind. Hover the chart to read any hour.</p>
+      </div>
+
+      <div class="doc-sec" id="campaign-result">
+        <h2>Reading the settlement</h2>
+        <ul>
+          <li><b>Verdict:</b> healed, fully absorbed, or nobody joined. <a href="#healing">Definitions</a></li>
+          <li><b>Where the budget went:</b> paid vs refunded.</li>
+          <li><b>Price comparison:</b> your guess, the posted price, what it settled at, the hidden true price and the pool split, on one scale. The closer teal (settled) is to violet (truth), the better discovery worked.</li>
+          <li><b>Ask met?</b> Whether the settled CPI covered that publisher's private ask. It can be "no": a publisher can join expecting one price and see it diluted by later arrivals. That's a known property. <a href="#limits">See limits</a></li>
+          <li><b>Copy link</b> saves your inputs and the seed in the URL, so anyone opening it gets exactly the same run.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ════════════ MARKET SIM ════════════ -->
+    <section class="panel" id="t-market">
+      <header>
+        <p class="eyebrow">Endpoint 2 · sim/simulate.js · POST /api/simulate</p>
+        <h1>Market simulator</h1>
+        <p class="lede">A whole season of campaigns, used to test whether price discovery converges on the truth.</p>
+        <div class="toc"><a href="#market">The season</a><a href="#markets">Market definitions</a><a href="#truth">The true price</a><a href="#scoring">Scoring</a></div>
+      </header>
+
+      <div class="doc-sec" id="market">
+        <h2>What a season does</h2>
+        <ol>
+          <li>Start with an <b>empty curve</b>.</li>
+          <li>For each campaign (a $100,000 budget over 240 hours): generate that campaign's publishers, work out the hidden <a href="#truth">true price</a>, post a price from the curve, run the campaign with the same <a href="#campaign">hourly join rule</a>, settle, and record the result in the curve.</li>
+          <li>Score every campaign after the first 40 against its true price.</li>
+        </ol>
+        <div class="plain">This is the full learning loop running on fast-forward. Early campaigns are guesses; by campaign 40 or so the teal line should hug the violet one.</div>
+        <p><b>Compare all markets</b> runs every market with the same seed and campaign count, giving the same kind of table as <code>REPORT.md</code> (which used 200 campaigns per market).</p>
+      </div>
+
+      <div class="doc-sec" id="markets">
+        <h2>Market definitions</h2>
+        <table>
+          <thead><tr><th>Market</th><th>~Publishers</th><th>Median ask</th><th>Advertiser quote</th><th>Arrivals</th></tr></thead>
+          <tbody>
+            <tr><td>Thin liquidity</td><td>15</td><td>$3.00</td><td>$2.00</td><td>even</td></tr>
+            <tr><td>Balanced</td><td>100</td><td>$2.00</td><td>$2.00</td><td>even</td></tr>
+            <tr><td>Abundant</td><td>300</td><td>$1.00</td><td>$2.00</td><td>even</td></tr>
+            <tr><td>Early burst</td><td>100</td><td>$2.00</td><td>$2.00</td><td>70% in hours 10–16</td></tr>
+            <tr><td>Late burst</td><td>100</td><td>$2.00</td><td>$2.00</td><td>70% in hours 190–200</td></tr>
+            <tr><td>Advertiser lowballs</td><td>60</td><td>$2.50</td><td>$0.50</td><td>even</td></tr>
+            <tr><td>Advertiser highballs</td><td>60</td><td>$2.00</td><td>$8.00</td><td>even</td></tr>
+            <tr><td>Thin + highball</td><td>15</td><td>$3.00</td><td>$8.00</td><td>even</td></tr>
+          </tbody>
+        </table>
+        <p>Each publisher's ask is the median × e<sup>0.3·N</sup>. Each delivers about 5 coins/hour (varied by e<sup>0.5·N</sup>) and waits about 72 hours on average before giving up. The lowball and highball markets test that a badly wrong advertiser quote can't steer the price.</p>
+      </div>
+
+      <div class="doc-sec" id="truth">
+        <h2>The true competitive price</h2>
+        <p>The benchmark everything is scored against. It uses information the mechanism never has: every publisher's private ask.</p>
+        <ol>
+          <li>Line publishers up from the cheapest ask to the most expensive.</li>
+          <li>Add each one's full potential delivery (rate × hours from their arrival).</li>
+          <li>Stop where the budget runs out. The price there is the true price. If the budget never runs out, it's the most expensive ask needed to take everyone.</li>
+        </ol>
+        <div class="plain">It's what a perfectly informed auctioneer would charge: buy the cheapest supply first until the money is gone.</div>
+      </div>
+
+      <div class="doc-sec" id="scoring">
+        <h2>How a season is scored</h2>
+        <table>
+          <tbody>
+            <tr><td><b>True CPI / discovered CPI</b></td><td>Medians over the scored campaigns</td></tr>
+            <tr><td><b>Error vs truth</b></td><td>Median of <code>|settled − truth| / truth</code> per campaign</td></tr>
+            <tr><td><b>Pool-split error</b></td><td>The same, for <code>B / M</code>. This is the naive baseline.</td></tr>
+            <tr><td><b>Budget refunded</b></td><td>Median share of the budget returned per campaign</td></tr>
+            <tr><td><b>Floor</b></td><td>How much the true price itself varies between campaigns (standard deviation ÷ median). Because nobody can predict which publishers show up, <b>no mechanism can beat this</b>.</td></tr>
+            <tr><td><b>Gap to floor</b></td><td>Error − floor. Close to 0 means discovery is as good as it can be.</td></tr>
+          </tbody>
+        </table>
+        <p>The chart's hover shows each campaign's pricing rule, posted price, settled price, truth, pool split, error and refund. <a href="#verdicts">How the verdict banner is chosen →</a></p>
+      </div>
+    </section>
+
+    <!-- ════════════ LADDER ════════════ -->
+    <section class="panel" id="t-ladder">
+      <header>
+        <p class="eyebrow">Publisher game · sim/ladder.js · /api/game/*</p>
+        <h1>The publisher ladder</h1>
+        <p class="lede">How the three targets are set, how they move, and why the money is never gamified.</p>
+        <div class="toc"><a href="#ladder">The game</a><a href="#capability">Capability model</a><a href="#rungs">The three rungs</a><a href="#bar">How the bar moves</a><a href="#mercy">Mercy rules</a><a href="#modes">Smooth vs Rungs only</a></div>
+      </header>
+
+      <div class="doc-sec" id="ladder">
+        <h2>The game</h2>
+        <p>You join one of five campaigns (each priced from a curve warmed on 25 earlier campaigns). Time advances <b>6 hours per step</b>. Each step you report how many impressions you delivered, and simulated rivals join and mint using the <a href="#campaign">same join rule</a>. At the end, everyone, you included, is settled with the <a href="#settlement">normal settlement</a>.</p>
+        <p>The ladder shows three <b>cumulative</b> targets (total impressions to reach). The dollar figure under each is your <b>projected payout</b> at that total after dilution by rivals.</p>
+      </div>
+
+      <div class="doc-sec" id="capability">
+        <h2>Capability model</h2>
+        <p>Targets come from <b>your own recent delivery</b>, not from an outside quota:</p>
+        <ul>
+          <li><b>Centre:</b> a weighted median of your last 8 steps (each older step counts 0.82× the next). Because it's a median, one lucky spike can't drag the bar up.</li>
+          <li><b>Spread σ:</b> how consistent you are, measured in log terms with a small-sample correction and kept between 0.28 and 0.9.</li>
+          <li><b>Before any history:</b> the model assumes you deliver what a typical rival delivers in 6 hours.</li>
+        </ul>
+      </div>
+
+      <div class="doc-sec" id="rungs">
+        <h2>The three rungs</h2>
+        <table>
+          <thead><tr><th>Rung</th><th>Placement</th><th>Design intent</th></tr></thead>
+          <tbody>
+            <tr><td><b style="color:#4f8ef7">REACH</b></td><td>the <a href="#bar">bar</a> itself</td><td>Cleared about 85% of the time. Deliberately set <i>below</i> typical delivery.</td></tr>
+            <tr><td><b style="color:#a459f5">PUSH</b></td><td>max(bar × e<sup>1.27σ</sup>, 3 × REACH)</td><td>About a coin flip</td></tr>
+            <tr><td><b style="color:#f0982a">STRETCH</b></td><td>max(bar × e<sup>2.3σ</sup>, 7 × REACH)</td><td>A real stretch, about 20%</td></tr>
+          </tbody>
+        </table>
+        <p>The design follows the "85% rule" and the challenge-point framework (people learn and stay engaged best when they succeed often but not always), goal-setting theory (goals must feel attainable), and flow-channel pacing.</p>
+        <p><b>Targets are frozen while you chase them.</b> After a miss, a cumulative target can only move <i>down</i> to meet you, never up.</p>
+        <div class="caution">The 3× / 7× minimum multiples currently override the probability-based spacing for most publishers, so PUSH and STRETCH are harder than their stated odds. See <a href="#open-items">open items</a>.</div>
+      </div>
+
+      <div class="doc-sec" id="bar">
+        <h2>How the bar moves</h2>
+        <ul>
+          <li><b>After a clear:</b> the bar rises toward your demonstrated level (<code>centre × e<sup>−1.15σ</sup></code>), at most 4× in one step. If your level has slipped below the bar, it drifts down gently (no more than 5% per step).</li>
+          <li><b>After a miss:</b> the bar <b>holds</b> for 2 misses, then eases by 12% per further miss.</li>
+          <li><b>The floor:</b> the bar never goes below the market minimum, which is 30% of what a typical rival delivers per step (at least 5). Below it, the ladder shows "minimum to stay in".</li>
+        </ul>
+        <div class="plain">Rising is earned and falling is slow. The floor keeps it a game: a bar that chased a non-delivering publisher down to 1 would reward doing nothing.</div>
+      </div>
+
+      <div class="doc-sec" id="mercy">
+        <h2>Mercy rules & pacing</h2>
+        <ul>
+          <li><b>Near miss:</b> delivering within 90% of REACH doesn't break your streak.</li>
+          <li><b>Streak freeze:</b> one ordinary miss per 5 steps is forgiven.</li>
+          <li><b>Recovery beat:</b> 3 steps in a row clearing at least PUSH earns a "breather" step where every rung is 22% easier. Difficulty is a sawtooth, not a ramp.</li>
+          <li><b>Pool nearly full:</b> when reaching a rung would add less than $1 to your projected payout (the pool is effectively yours), rungs stop showing odds and say so.</li>
+        </ul>
+      </div>
+
+      <div class="doc-sec" id="modes">
+        <h2>Smooth vs Rungs only</h2>
+        <p><b>Smooth</b> shows your real projected earnings. <b>Rungs only</b> is a presentation mode: each step you "bank" the dollar gain of the highest rung you cleared, and the result screen shows it <i>next to</i> the real market settlement.</p>
+        <div class="plain">Money is never gamified. Your actual payout is always coins × settled CPI. Tiers (Bronze 1% → Diamond 30% of the pool) are recognition only.</div>
+      </div>
+    </section>
+
+    <!-- ════════════ MORE ════════════ -->
+    <section class="panel" id="t-more">
+      <header>
+        <p class="eyebrow">More & under the hood</p>
+        <h1>Everything that didn't fit on a page</h1>
+        <p class="lede">Seeds and reproducibility, known limits, display simplifications, open items for the algorithm, the API and a glossary.</p>
+        <div class="toc"><a href="#seeds">Seeds</a><a href="#limits">Limits</a><a href="#display">Display notes</a><a href="#verdicts">Verdict rules</a><a href="#open-items">Open items</a><a href="#api">API</a><a href="#glossary">Glossary</a></div>
+      </header>
+
+      <div class="doc-sec" id="seeds">
+        <h2>Random seeds & reproducibility</h2>
+        <p>A <b>seed</b> is a number that fixes every "random" choice in a run. Same seed + same inputs = exactly the same result, which lets you share, compare and debug runs. Seed fields are filled in for you: press <b>🎲</b> for a new one, or type your own.</p>
+        <table>
+          <thead><tr><th>Where</th><th>What the seed controls</th></tr></thead>
+          <tbody>
+            <tr><td>Campaign simulator</td><td><b>Everything:</b> the market pick and jitter, the 40 warm-up campaigns, exploration, and this campaign's publishers.</td></tr>
+            <tr><td>Market simulator</td><td><b>Only the mechanism's exploration.</b> Each campaign's publishers are fixed by its position in the season, so every seed faces the <i>same world</i> and you're comparing how the mechanism searched it.</td></tr>
+            <tr><td>Live market → Add history</td><td>Not seeded (it uses the clock), so each click adds fresh history.</td></tr>
+            <tr><td>Publisher game</td><td>Offers are randomly generated each time the lobby refreshes.</td></tr>
+          </tbody>
+        </table>
+        <p>The generator is <code>mulberry32</code>, a small, fast, deterministic PRNG. It's fine for simulation, but it isn't cryptographic.</p>
+      </div>
+
+      <div class="doc-sec" id="limits">
+        <h2>Known limits of the mechanism</h2>
+        <ul>
+          <li><b>Exploration costs money.</b> The warm-up plus ~10% off-target campaigns are the price of learning a curve nobody can see.</li>
+          <li><b>Not strategy-proof.</b> Publishers who hold out for a markup can gain. A uniform price with free entry invites demand reduction.</li>
+          <li><b>Ask not always met.</b> Uniform price + fixed budget + open entry means that if enough publishers join, <code>B/M</code> can fall below what some of them wanted. Avoiding that needs admission caps or per-publisher prices, both excluded by design.</li>
+          <li><b>Stable population assumed.</b> A sudden shift in supply is only tracked as new campaigns accumulate.</li>
+          <li><b>Misquoted thin markets</b> carry extra error from warm-up contamination, and this fades as more campaigns arrive.</li>
+        </ul>
+      </div>
+
+      <div class="doc-sec" id="display">
+        <h2>Display simplifications (UI only)</h2>
+        <ul>
+          <li><b>Campaign simulator publisher table, mid-run:</b> coins are shown as <i>final coins × share of the campaign elapsed</i>, which is a smooth approximation. The final table and settlement use exact figures.</li>
+          <li><b>Pool-split lines</b> are clipped at the chart's top (the Market simulator scales to the settled and true prices), so a runaway <code>B/M</code> in thin markets doesn't flatten everything else. Hover to read the exact value.</li>
+          <li><b>Live-market curve markers</b> are computed for a $100,000 budget.</li>
+          <li><b>Price comparison bars</b> scale to the market prices; a very high pool split simply fills its bar.</li>
+        </ul>
+      </div>
+
+      <div class="doc-sec" id="verdicts">
+        <h2>How the result verdicts are chosen</h2>
+        <p>These banners are UI summaries on top of the numbers. They don't feed back into anything.</p>
+        <table>
+          <tbody>
+            <tr><td><b>Campaign: Budget fully absorbed</b></td><td>Refund ≈ $0 (settled at <code>B/M</code>)</td></tr>
+            <tr><td><b>Campaign: Thin market, healed</b></td><td>Settled below <code>B/M</code>, so there is a refund</td></tr>
+            <tr><td><b>Campaign: Nobody took it</b></td><td>0 coins minted, so the whole budget is refunded</td></tr>
+            <tr><td><b>Season: Discovery is working</b></td><td>Error is within 5 points of the floor <i>and</i> beats the pool split</td></tr>
+            <tr><td><b>Season: Better than pool split</b></td><td>Beats the pool split but is more than 5 points above the floor</td></tr>
+            <tr><td><b>Season: Pool split already accurate</b></td><td>The pool split's error is lower or equal. This is typical of deep, balanced markets</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-sec" id="open-items">
+        <h2>Open items for the algorithm polish</h2>
+        <p class="where">Found while writing these docs. Nothing here was changed.</p>
+        <ul>
+          <li><b>3 ladder tests fail</b> (<code>npm test</code>): "rungs clear at roughly their advertised odds", "the bar eases gradually and stops at the market floor", "a publisher below the market floor cannot simply clear the bar".</li>
+          <li><b>Rung spacing:</b> the <code>3×</code> / <code>7×</code> REACH minimums in <code>ladder()</code> override the σ-based quantiles, which pushes PUSH and STRETCH past their 50% / 20% targets.</li>
+          <li><b>Rise cap:</b> <code>BAR_RISE_CAP = 4</code> in code, while the README says 1.5× per step.</li>
+          <li><b>Headroom fit unused:</b> <code>ladder()</code> computes <code>fit</code> (to scale rungs to what the pool can absorb) but never applies it.</li>
+          <li><b>Plateau wording:</b> the report says "top price decile", but the code uses the top 20% of the grid.</li>
+          <li><b>Rungs-only banking</b> lives in the browser only; refreshing the page loses it.</li>
+        </ul>
+      </div>
+
+      <div class="doc-sec" id="api">
+        <h2>API reference</h2>
+        <table>
+          <thead><tr><th>Endpoint</th><th>Body</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>POST /api/campaigns</code></td><td><code>{ budget, wantedCpi, durationHours }</code></td><td>Create a campaign. The price comes from the curve.</td></tr>
+            <tr><td><code>GET /api/campaigns[/:id]</code></td><td></td><td>List, or a single campaign with estimated payouts</td></tr>
+            <tr><td><code>POST /api/campaigns/:id/join</code></td><td><code>{ publisher }</code></td><td>Sticky join</td></tr>
+            <tr><td><code>POST /api/campaigns/:id/mint</code></td><td><code>{ publisher, impressions }</code></td><td>1 coin per impression</td></tr>
+            <tr><td><code>POST /api/campaigns/:id/settle</code></td><td></td><td>Settle, refund, and teach the curve</td></tr>
+            <tr><td><code>GET /api/market</code></td><td></td><td>Learned curve and both candidate prices</td></tr>
+            <tr><td><code>POST /api/market/seed</code></td><td><code>{ market, campaigns }</code></td><td>Add simulated history to the live curve</td></tr>
+            <tr><td><code>POST /api/simulate</code></td><td><code>{ market, campaigns, seed }</code></td><td>Endpoint 2: a season, scored against truth</td></tr>
+            <tr><td><code>POST /api/simulate/campaign</code></td><td><code>{ budget, expectedCpi, durationDays, archetype, seed }</code></td><td>Endpoint 1: one campaign, hour by hour</td></tr>
+            <tr><td><code>GET /api/markets</code>, <code>/api/archetypes</code></td><td></td><td>Available markets</td></tr>
+            <tr><td><code>/api/game/…</code></td><td></td><td>Publisher game: offers, join, step, settle</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-sec" id="glossary">
+        <h2>Glossary</h2>
+        <table>
+          <tbody>
+            <tr><td><b>CPI</b></td><td>Cost per impression: dollars paid per delivered impression (= per coin)</td></tr>
+            <tr><td><b>Coin</b></td><td>The receipt for one verified impression. <code>M</code> = total coins.</td></tr>
+            <tr><td><b>B</b></td><td>The campaign budget (the cash pool)</td></tr>
+            <tr><td><b>Ask / reservation price</b></td><td>The lowest CPI a publisher will accept. Private, and never seen by the mechanism.</td></tr>
+            <tr><td><b>Sticky</b></td><td>Once joined, a publisher can't leave or re-bid</td></tr>
+            <tr><td><b>Observation</b></td><td>One settled campaign's (posted price, coins) pair</td></tr>
+            <tr><td><b>Healed</b></td><td>Settled below the pool split because supply ran out, with the difference refunded</td></tr>
+            <tr><td><b>Floor</b></td><td>The irreducible campaign-to-campaign variation in the true price</td></tr>
+            <tr><td><b>Archetype</b></td><td>A named publisher market used by the campaign simulator</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const tabs = [...document.querySelectorAll('.tab')];
+const panels = [...document.querySelectorAll('.panel')];
+
+function activate(panelId, target) {
+  for (const t of tabs) t.setAttribute('aria-selected', String(t.dataset.tab === panelId));
+  for (const p of panels) p.classList.toggle('active', p.id === panelId);
+  if (target) {
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      target.classList.remove('flash'); void target.offsetWidth; target.classList.add('flash');
+    });
+  } else {
+    window.scrollTo({ top: 0 });
+  }
+}
+
+function route() {
+  const id = decodeURIComponent(location.hash.slice(1));
+  const el = id && document.getElementById(id);
+  if (!el) return activate('t-overview');
+  const panel = el.classList.contains('panel') ? el : el.closest('.panel');
+  activate(panel.id, el.classList.contains('panel') ? null : el);
+}
+
+for (const t of tabs) {
+  t.onclick = () => { history.replaceState(null, '', '#' + t.dataset.tab); activate(t.dataset.tab); };
+}
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>

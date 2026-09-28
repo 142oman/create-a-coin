@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Creator Pool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..800,50;1,9..144,300..800,50&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='%231F5F5B'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23F3EEE4' stroke-width='2.5'/%3E%3C/svg%3E">
+</head>
+<body>
+  <header class="masthead">
+    <div class="masthead-inner">
+      <a class="wordmark" href="#brand" aria-label="Creator Pool home">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13"/><circle cx="16" cy="16" r="7" fill="none" stroke="var(--paper)" stroke-width="2.5"/></svg>
+        <span><em>Creator</em> Pool</span>
+      </a>
+      <nav class="tabs" aria-label="Sections">
+        <a href="#brand" data-view="brand">Brand</a>
+        <a href="#creator" data-view="creator">Creator</a>
+        <a href="#backtest" data-view="backtest">Backtest</a>
+        <a href="#compare" data-view="compare">Compare</a>
+        <a href="#method" data-view="method">Method</a>
+      </nav>
+      <button class="theme-toggle" id="theme" aria-label="Toggle dark mode">◐</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- BRAND ------------------------------------------------------------------------------------>
+    <section id="view-brand" class="view">
+      <div class="intro">
+        <p class="kicker">Create a campaign</p>
+        <h1>You set the budget. <em>The market sets the price</em> of a view.</h1>
+        <p class="lede">No price cap, no guaranteed minimum. Posts that pass a minimum threshold mint coins,
+          either at each rung they reach or for every view. The budget backs all the coins, and one price per coin
+          is set when the campaign ends. If too few views arrive, you pay the negotiated price and get the rest back.
+          Then simulate the campaign to see it play out.</p>
+      </div>
+
+      <div class="build-grid">
+        <form id="brand-form" class="panel form" autocomplete="off">
+          <p class="form-foot">Pick as many as suit you in each group, or none: none means the campaign is open to all of them.</p>
+          <fieldset>
+            <legend>Category</legend>
+            <div class="chips" data-name="categories"></div>
+          </fieldset>
+          <fieldset>
+            <legend>Platform</legend>
+            <div class="chips" data-name="platforms"></div>
+          </fieldset>
+          <fieldset>
+            <legend>Format</legend>
+            <div class="chips" data-name="formats"></div>
+          </fieldset>
+          <fieldset>
+            <legend>Who can join</legend>
+            <div class="chips" data-name="tiers"></div>
+          </fieldset>
+          <label class="field">
+            <span>Budget</span>
+            <div class="input-affix"><i>₹</i><input name="total_budget" type="number" min="1" step="1" value="300000" required></div>
+            <small data-hint="budget"></small>
+          </label>
+          <div class="field-row">
+            <label class="field"><span>Start</span><input name="start_date" type="date"></label>
+            <label class="field"><span>End</span><input name="end_date" type="date"></label>
+          </div>
+          <p class="form-foot live-status" id="live-status" aria-live="polite">Updates as you choose.</p>
+          <p class="form-foot" id="data-foot"></p>
+        </form>
+
+        <div id="brand-out" class="build-out">
+          <div class="empty">Choose a campaign on the left.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CREATOR ---------------------------------------------------------------------------------->
+    <section id="view-creator" class="view" hidden>
+      <div class="intro">
+        <p class="kicker">What a creator sees</p>
+        <h1>Follow one creator through <em>the simulated campaign</em>.</h1>
+        <p class="lede">Drag through the days. The coin's value falls as other creators post, each post climbs
+          its rungs, and the payout is fixed only on the last day. Both payout rules are shown: coin rungs and no rungs.</p>
+      </div>
+      <div id="creator-out"><div class="loading">Loading campaign…</div></div>
+    </section>
+
+    <!-- BACKTEST --------------------------------------------------------------------------------->
+    <section id="view-backtest" class="view" hidden>
+      <div class="intro">
+        <p class="kicker">Would it have worked?</p>
+        <h1>Real posts from past campaigns, replayed under <em>all three</em> systems.</h1>
+        <p class="lede">Rungs and the market reference are rebuilt from only what was known before each
+          campaign started. Same posts, same views: only the payout rules change. Creator behaviour is held fixed,
+          since nothing in the data says how it would move.</p>
+      </div>
+      <div id="backtest-out"><div class="loading">Replaying history…</div></div>
+    </section>
+
+    <!-- COMPARE ---------------------------------------------------------------------------------->
+    <section id="view-compare" class="view" hidden>
+      <div class="intro">
+        <p class="kicker">Three systems, same posts</p>
+        <h1>The status quo, <em>our coin rungs</em>, and no rungs at all.</h1>
+        <p class="lede">Pick a past campaign. The status quo ladder is the one ops actually used, and you can edit it.
+          Coin rungs are built from past posts and paid in coins. No rungs pays every view past the same minimum
+          threshold. The coin price in both is set by the market when the campaign ends.</p>
+      </div>
+      <div class="compare-grid">
+        <div class="panel form">
+          <label class="field"><span>Past campaign</span><select id="cmp-campaign"></select></label>
+          <div class="ladder-editor">
+            <div class="editor-head"><span>Status quo: views</span><span>Payout (₹, cumulative)</span><span></span></div>
+            <div id="cmp-rows"></div>
+            <button type="button" class="ghost" id="cmp-add">+ Add rung</button>
+          </div>
+          <div class="presets">
+            <span>Start from</span>
+            <button type="button" class="link" data-preset="status">reset to the ladder actually used</button>
+            <button type="button" class="link" data-preset="brief">the brief's example</button>
+          </div>
+          <button class="primary" id="cmp-run">Score it <span aria-hidden="true">→</span></button>
+        </div>
+        <div id="cmp-out" class="cmp-out"><div class="empty">Results appear here.</div></div>
+      </div>
+    </section>
+
+    <!-- METHOD ----------------------------------------------------------------------------------->
+    <section id="view-method" class="view" hidden>
+      <div class="doc-tabs" role="tablist">
+        <button data-doc="one-pager" class="active">One-pager</button>
+        <button data-doc="methodology">Methodology</button>
+        <button data-doc="discussion">Design discussion</button>
+        <button data-doc="validation">Model validation</button>
+        <button data-doc="backtest">Backtest report</button>
+        <button data-doc="readme">Setup</button>
+      </div>
+      <article id="doc" class="prose"></article>
+    </section>
+  </main>
+
+  <footer class="colophon">
+    Synthetic data · every number on these pages is computed by the code in <code>ladder/</code>.
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+"""Web app: the landing page, the advertiser and creator flows, Compare and Backtest over a small JSON
+API. Standard library only. The world lives in memory; changing the recipe regenerates it for
+everyone using this server."""
+import json
+import threading
+import time
+from dataclasses import asdict
+from http import HTTPStatus
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
+
+from . import backtest, compare, data, simulate, validate
+from .config import ALL_FORMATS, CATEGORIES, FORMATS, NAME, PLATFORM_OF, REVIEW_DAYS, TIERS
+from .history import replay
+from .world import Recipe, generate
+
+ROOT = Path(__file__).resolve().parent.parent
+WEB = ROOT / "web"
+DOCS = {"methodology": "docs/METHODOLOGY.md", "one-pager": "docs/ONE_PAGER.md",
+        "discussion": "docs/DISCUSSION.md", "readme": "README.md"}
+BRIEF_LADDER = [[10000, 500], [50000, 2000], [100000, 5000], [500000, 15000]]
+
+
+class State:
+    lock = threading.Lock()
+    world = None
+    summary = None
+    backtest = None
+    validation = None
+    built_in = 0.0
+
+    @classmethod
+    def ready(cls):
+        with cls.lock:
+            if cls.world is None:
+                cls.set_world(data.load())
+        return cls
+
+    @classmethod
+    def set_world(cls, world):
+        t = time.perf_counter()
+        cls.world = world
+        _, _, cls.summary = replay(world)
+        cls.backtest = backtest.run(world)
+        cls.validation = validate.run(world)
+        cls.built_in = time.perf_counter() - t
+
+
+def meta():
+    s = State.ready()
+    w = s.world
+    return {
+        "name": NAME, "categories": CATEGORIES, "formats": FORMATS, "platform_of": PLATFORM_OF, "tiers": TIERS,
+        "review_days": REVIEW_DAYS, "recipe": asdict(w.recipe), "params": w.params,
+        "counts": {"campaigns": len(w.campaigns), "creators": len(w.creators), "posts": len(w.posts)},
+        "scenarios": {k: v["label"] for k, v in simulate.SCENARIOS.items()},
+        "brief_ladder": BRIEF_LADDER,
+    }
+
+
+class Handler(SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str(WEB), **kwargs)
+
+    def log_message(self, fmt, *args):
+        pass
+
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-cache")   # always serve the latest page and script
+        super().end_headers()
+
+    def _json(self, payload, status=HTTPStatus.OK):
+        body = json.dumps(payload, default=_plain).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _body(self):
+        length = int(self.headers.get("Content-Length") or 0)
+        return json.loads(self.rfile.read(length) or b"{}")
+
+    def do_GET(self):
+        url = urlparse(self.path)
+        q = {k: v[0] for k, v in parse_qs(url.query).items()}
+        try:
+            if url.path == "/api/meta":
+                return self._json(meta())
+            if url.path == "/api/backtest":
+                s = State.ready()
+                return self._json({"backtest": s.backtest, "validation": s.validation, "seconds": s.built_in,
+                                   "recipe": asdict(s.world.recipe), "params": s.world.params,
+                                   "counts": meta()["counts"]})
+            if url.path == "/api/typical-budget":
+                s = State.ready()
+                cats = [c for c in q.get("categories", "").split(",") if c]
+                fmts = [f for f in q.get("formats", "").split(",") if f]
+                return self._json({"budget": simulate.typical_budget(s.world, cats, fmts)})
+            if url.path == "/api/creator/profiles":
+                return self._json(simulate.profiles(State.ready().world, int(q.get("seed", 1))))
+            if url.path.startswith("/api/doc/"):
+                name = url.path.rsplit("/", 1)[-1]
+                if name not in DOCS:
+                    return self._json({"error": "unknown document"}, HTTPStatus.NOT_FOUND)
+                f = ROOT / DOCS[name]
+                return self._json({"name": name, "markdown": f.read_text(encoding="utf-8") if f.exists() else ""})
+        except (KeyError, ValueError) as e:
+            return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
+        return super().do_GET()
+
+    def do_POST(self):
+        path = urlparse(self.path).path
+        try:
+            body = self._body()
+            s = State.ready()
+            if path == "/api/world":
+                recipe = Recipe.randomised(int(body["seed"])) if body.get("randomise") else Recipe.from_dict(body)
+                with State.lock:
+                    State.set_world(generate(recipe))
+                return self.do_GET_backtest()
+            if path == "/api/publish":
+                return self._json(simulate.simulate(s.world, s.summary, body.get("categories"), body.get("formats"),
+                                                    body["budget"], body["days"], body.get("seed"),
+                                                    body.get("scenario") or "normal"))
+            if path == "/api/creator/campaigns":
+                return self._json(simulate.campaign_cards(s.world, body["creator_id"], int(body.get("seed", 1))))
+            if path == "/api/creator/run":
+                return self._json(simulate.creator_run(s.world, s.summary, body["creator_id"], body["card"],
+                                                       int(body.get("seed", 1))))
+            if path == "/api/compare":
+                return self._json(compare.compare(s.world, body.get("categories"), body.get("formats"),
+                                                  body["budget"], body["old"]))
+        except (KeyError, ValueError, TypeError) as e:
+            return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
+        return self._json({"error": "not found"}, HTTPStatus.NOT_FOUND)
+
+    def do_GET_backtest(self):
+        s = State.ready()
+        return self._json({"backtest": s.backtest, "validation": s.validation, "seconds": s.built_in,
+                           "recipe": asdict(s.world.recipe), "params": s.world.params, "counts": meta()["counts"]})
+
+
+def _plain(x):
+    if isinstance(x, (set, tuple)):
+        return list(x)
+    return str(x)
+
+
+def serve(port=8000):
+    State.ready()
+    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    print(f"{NAME} on http://localhost:{port}  (Ctrl+C to stop)")
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass

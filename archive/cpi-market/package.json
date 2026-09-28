@@ -1,0 +1,12 @@
+{
+  "name": "rtgs-cpi-market",
+  "version": "1.0.0",
+  "description": "Mint-only CPI price discovery for sticky ad campaigns",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "simulate": "node sim/simulate.js",
+    "test": "node --test"
+  },
+  "license": "MIT"
+}

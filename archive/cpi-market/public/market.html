@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Market Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/app.css">
+<script src="/app.js"></script>
+<style>
+  .run-bar { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 16px; margin-top: 18px; }
+  .run-bar .fields { flex: 1 1 380px; }
+  .chart-wrap { position: relative; }
+  .tip {
+    position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line-strong);
+    box-shadow: var(--shadow); border-radius: 8px; padding: 7px 10px; font-size: 12px; line-height: 1.5;
+    font-variant-numeric: tabular-nums; transform: translate(-50%, 0); white-space: nowrap; top: 4px;
+  }
+  .tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 18px; }
+  @media (max-width: 900px) { .result-grid { grid-template-columns: 1fr; } }
+  td.best { color: var(--good); font-weight: 600; }
+  tr.sel td { background: var(--accent-soft); }
+  #compareTable td:first-child { font-weight: 550; }
+  #markets { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 760px) { #markets { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<nav id="topnav"></nav>
+<div class="page">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">Endpoint 2 · a whole season</p>
+      <h1>Market simulator</h1>
+      <p class="lede">Run a season of many $100k campaigns through one publisher market and score the mechanism against the true price, which the mechanism never gets to see. This answers the question: does price discovery actually work?</p>
+    </div>
+    <a class="doc-link" href="/docs.html#market">How this simulator works</a>
+  </header>
+
+  <main class="grid">
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title"><span class="step-num">1</span><h2>Choose a market</h2></div>
+        <a class="doc-link" href="/docs.html#markets">Market definitions</a>
+      </div>
+      <div class="choices" id="markets"></div>
+
+      <div class="run-bar">
+        <div class="fields">
+          <div class="field">
+            <label for="simCount">Campaigns in the season</label>
+            <input id="simCount" type="number" value="150" min="40" max="600">
+            <div class="hint">40–600. The first 40 are warm-up and aren't scored.</div>
+          </div>
+          <div class="field">
+            <label for="simSeed">Random seed <a class="doc-link inline" href="/docs.html#seeds">(?)</a></label>
+            <div class="input-group">
+              <input id="simSeed" type="number" min="1" data-seed>
+              <button class="btn ghost icon" data-seed-roll="simSeed" title="Roll a new seed">🎲</button>
+            </div>
+            <div class="hint">Drives the price exploration. Same seed = same season.</div>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn ghost" id="allBtn" title="Run every market with this seed and compare">Compare all markets</button>
+          <button class="btn" id="simBtn">▶ Run season</button>
+        </div>
+      </div>
+      <div class="err" id="err"></div>
+    </section>
+
+    <!-- ── single-market result ── -->
+    <section class="card hidden fade-in" id="resultCard">
+      <div class="card-head">
+        <div class="card-title"><span class="step-num">2</span><h2>Season result</h2><span class="pill accent" id="resultLabel"></span><span class="pill" id="seedLabel"></span></div>
+        <div class="actions">
+          <a class="doc-link" href="/docs.html#scoring">How it's scored</a>
+          <button class="btn ghost small" id="jsonBtn">⬇ JSON</button>
+          <button class="btn small" id="rerollBtn">🎲 New seed & run again</button>
+        </div>
+      </div>
+
+      <div class="verdict" id="verdictBox">
+        <div class="icon" id="verdictIcon"></div>
+        <div><h4 id="verdictTitle"></h4><p id="verdictText"></p></div>
+      </div>
+
+      <div class="stats" id="simStats"></div>
+
+      <h3>Settled CPI vs the true price, campaign by campaign</h3>
+      <div class="chart-wrap">
+        <svg id="simChart" class="chart" viewBox="0 0 1060 260" role="img" aria-label="Discovered price against the true price"></svg>
+        <div class="tip hidden" id="tip"></div>
+      </div>
+      <div class="legend">
+        <span><i class="key" style="background:var(--c-cpi)"></i>settled CPI (mechanism)</span>
+        <span><i class="key" style="background:var(--c-truth)"></i>true competitive CPI (hidden)</span>
+        <span><i class="key" style="background:var(--c-pool)"></i>pool split B/M</span>
+        <span><i class="key area" style="background:var(--muted)"></i>warm-up (not scored)</span>
+      </div>
+
+      <div class="result-grid">
+        <div>
+          <h3>Error vs the true price (median)</h3>
+          <div id="errorBars"></div>
+          <p class="note" style="margin-top:10px">The <b>floor</b> is how much the true price itself moves from one campaign to the next. No mechanism can beat it, because nobody can predict which publishers will turn up.</p>
+        </div>
+        <div>
+          <h3>How campaigns were priced <a class="doc-link inline" href="/docs.html#pricing" style="text-transform:none;letter-spacing:0">rules</a></h3>
+          <div id="sourceBars"></div>
+          <h3>Market spec</h3>
+          <div class="stats" id="specStats"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── compare all ── -->
+    <section class="card hidden fade-in" id="compareCard">
+      <div class="card-head">
+        <div class="card-title"><h2>All markets, same seed</h2><span class="pill" id="compareSeed"></span></div>
+        <a class="doc-link" href="/docs.html#scoring">Reading this table</a>
+      </div>
+      <div class="table-wrap">
+        <table id="compareTable">
+          <thead><tr><th>Market</th><th>True CPI</th><th>Discovered</th><th>Error</th><th>Pool-split error</th><th>Refunded</th><th>Floor</th><th>Gap to floor</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="note">Median over post-warm-up campaigns. Green error = the mechanism beats splitting the pool. Click a row to open that market's full season.</p>
+    </section>
+  </main>
+</div>
+
+<script>
+const { $, cpi, pct, stat } = UI;
+
+// Mirrors sim/simulate.js MARKETS.
+const MARKETS = [
+  ['thin', 'Thin liquidity', '≈15 publishers · asks ≈ $3.00'],
+  ['balanced', 'Balanced', '≈100 publishers · asks ≈ $2.00'],
+  ['abundant', 'Abundant', '≈300 publishers · asks ≈ $1.00'],
+  ['earlyBurst', 'Early burst', 'Balanced, 70% arrive hours 10–16'],
+  ['lateBurst', 'Late burst', 'Balanced, 70% arrive hours 190–200'],
+  ['lowball', 'Advertiser lowballs', '60 publishers · advertiser quotes $0.50'],
+  ['highball', 'Advertiser highballs', '60 publishers · advertiser quotes $8.00'],
+  ['thinHighball', 'Thin + highball', 'Thin market and an $8.00 quote'],
+];
+const nameOf = (id) => (MARKETS.find((m) => m[0] === id) || [id, id])[1];
+let market = 'balanced';
+let result = null;
+
+function renderMarkets() {
+  $('markets').innerHTML = MARKETS.map(([id, name, desc]) =>
+    '<button class="choice" data-id="' + id + '" aria-pressed="' + (id === market) + '"><b>' + name + '</b><span>' + desc + '</span></button>').join('');
+  for (const b of $('markets').querySelectorAll('.choice')) b.onclick = () => { market = b.dataset.id; renderMarkets(); };
+}
+
+function params(name) {
+  return { market: name, campaigns: Number($('simCount').value), seed: Number($('simSeed').value) || 1 };
+}
+
+async function runSim() {
+  $('err').textContent = '';
+  $('simBtn').disabled = true;
+  $('simBtn').textContent = 'Running…';
+  try {
+    const p = params(market);
+    result = await UI.api('/api/simulate', 'POST', p);
+    result.seed = p.seed;
+    showResult();
+    $('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    $('err').textContent = e.message;
+  }
+  $('simBtn').disabled = false;
+  $('simBtn').textContent = '▶ Run season';
+}
+
+function showResult() {
+  const r = result;
+  const s = r.summary;
+  $('resultCard').classList.remove('hidden');
+  $('resultLabel').textContent = nameOf(r.market) + ' · ' + r.campaigns + ' campaigns';
+  $('seedLabel').textContent = 'seed ' + r.seed;
+
+  const gap = s.error - s.floor;
+  const beatsSplit = s.error < s.poolSplitError;
+  let tone, icon, title, text;
+  if (gap <= 5 && beatsSplit) {
+    tone = 'good'; icon = '✓'; title = 'Discovery is working';
+    text = 'The discovered price was off by ' + pct(s.error) + ' at the median, against a floor of ' + pct(s.floor)
+      + ' that no mechanism can beat. Splitting the pool would have been off by ' + pct(s.poolSplitError) + '.';
+  } else if (beatsSplit) {
+    tone = 'warn'; icon = '≈'; title = 'Better than the pool split, but above the floor';
+    text = 'The error was ' + pct(s.error) + ' against a floor of ' + pct(s.floor) + ', a gap of ' + gap.toFixed(0)
+      + ' points. That’s still well ahead of the pool split at ' + pct(s.poolSplitError) + '. Misquoted priors in thin markets usually shrink this as more campaigns run.';
+  } else {
+    tone = 'neutral'; icon = '·'; title = 'Pool split is already accurate here';
+    text = 'In this market splitting the pool lands close to the truth (' + pct(s.poolSplitError) + ' error), so the mechanism ('
+      + pct(s.error) + ') has little room to improve on it. That’s typical of deep, balanced supply.';
+  }
+  $('verdictBox').className = 'verdict ' + tone;
+  $('verdictIcon').textContent = icon;
+  $('verdictTitle').textContent = title;
+  $('verdictText').textContent = text;
+
+  $('simStats').innerHTML =
+    stat('true CPI (hidden)', cpi(s.truth), { cls: 'hero', sub: 'full-information price' }) +
+    stat('discovered CPI', cpi(s.settled), { cls: 'hero good', sub: 'what the mechanism settled' }) +
+    stat('error vs truth', pct(s.error), { cls: 'hero accent', sub: 'floor ' + pct(s.floor) }) +
+    stat('budget refunded', pct(s.refundShare), { cls: 'hero warn', sub: 'median per campaign' });
+
+  const top = Math.max(s.poolSplitError, s.error, s.floor) * 1.1 || 1;
+  $('errorBars').innerHTML = UI.hbars([
+    { name: 'Floor (best possible)', value: s.floor, label: pct(s.floor), color: 'var(--muted)' },
+    { name: 'This mechanism', value: s.error, label: pct(s.error), color: 'var(--c-cpi)' },
+    { name: 'Pool split B/M', value: s.poolSplitError, label: pct(s.poolSplitError), color: 'var(--c-pool)' },
+  ], top);
+
+  const counts = {};
+  for (const c of r.series) counts[c.source] = (counts[c.source] || 0) + 1;
+  const labels = { 'warmup sweep': 'Warm-up sweep', 'supply-saturated': 'Supply saturated', 'budget-exhausted': 'Budget exhausted', prior: 'Prior (no curve yet)' };
+  const colors = { 'warmup sweep': 'var(--muted)', 'supply-saturated': 'var(--c-cpi)', 'budget-exhausted': 'var(--accent)', prior: 'var(--c-posted)' };
+  $('sourceBars').innerHTML = UI.hbars(Object.entries(counts).map(([k, v]) => ({
+    name: labels[k] || k, value: v, label: v + ' · ' + Math.round((v / r.series.length) * 100) + '%', color: colors[k] || 'var(--accent)',
+  })), r.series.length);
+
+  const sp = r.spec;
+  $('specStats').innerHTML =
+    stat('publishers (mean)', sp.publishers) +
+    stat('median ask', cpi(sp.medianReservation)) +
+    stat('advertiser quote', cpi(sp.wantedCpi)) +
+    stat('arrivals', sp.arrivals);
+
+  drawSim(r.series);
+}
+
+const G = { W: 1060, H: 260, P: { l: 52, r: 14, t: 14, b: 28 } };
+let simScale = null;
+
+function drawSim(series) {
+  const svg = $('simChart');
+  const { W, H, P } = G;
+  // Scale to the prices being compared; the pool split is clipped at the top when it runs away.
+  const vals = series.map((s) => s.settled).concat(series.map((s) => s.truth)).filter((v) => v > 0);
+  const ymax = Math.max.apply(null, vals) * 1.35;
+  const X = (i) => P.l + (i / (series.length - 1 || 1)) * (W - P.l - P.r);
+  const Y = (v) => H - P.b - (v / ymax) * (H - P.t - P.b);
+  simScale = { X, Y, ymax };
+  const path = (key, cap) => series.map((s, i) => {
+    const v = Math.min(s[key] || 0, cap || Infinity);
+    return (i ? 'L' : 'M') + X(i).toFixed(1) + ',' + Y(v).toFixed(1);
+  }).join('');
+  const warm = series.filter((s) => s.warmup).length;
+  const yticks = [0, 0.25, 0.5, 0.75, 1].map((f) => {
+    const v = ymax * f;
+    return '<text x="' + (P.l - 8) + '" y="' + (Y(v) + 3) + '" font-size="10" fill="var(--muted)" text-anchor="end">' + cpi(v) + '</text>'
+      + '<line x1="' + P.l + '" y1="' + Y(v) + '" x2="' + (W - P.r) + '" y2="' + Y(v) + '" stroke="var(--line)" stroke-dasharray="2 4"/>';
+  }).join('');
+  const xticks = [];
+  const every = series.length > 300 ? 100 : 50;
+  for (let n = every; n <= series.length; n += every) {
+    xticks.push('<text x="' + X(n - 1).toFixed(1) + '" y="' + (H - 9) + '" font-size="10" fill="var(--muted)" text-anchor="middle">#' + n + '</text>');
+  }
+  svg.innerHTML = yticks
+    + '<rect x="' + P.l + '" y="' + P.t + '" width="' + (X(warm) - P.l).toFixed(1) + '" height="' + (H - P.t - P.b) + '" fill="var(--muted)" opacity=".08"/>'
+    + '<text x="' + (P.l + 8) + '" y="' + (P.t + 13) + '" font-size="10.5" fill="var(--muted)">warm-up · ' + warm + ' campaigns</text>'
+    + '<path d="' + path('poolSplit', ymax) + '" fill="none" stroke="var(--c-pool)" stroke-width="1.2" opacity=".75"/>'
+    + '<path d="' + path('truth') + '" fill="none" stroke="var(--c-truth)" stroke-width="2"/>'
+    + '<path d="' + path('settled') + '" fill="none" stroke="var(--c-cpi)" stroke-width="1.8"/>'
+    + '<line id="hoverLine" x1="0" x2="0" y1="' + P.t + '" y2="' + (H - P.b) + '" stroke="var(--ink)" opacity="0"/>'
+    + xticks.join('');
+}
+
+$('simChart').addEventListener('mousemove', (e) => {
+  if (!result || !simScale) return;
+  const box = $('simChart').getBoundingClientRect();
+  const vx = ((e.clientX - box.left) / box.width) * G.W;
+  const n = result.series.length;
+  const i = Math.round(((vx - G.P.l) / (G.W - G.P.l - G.P.r)) * (n - 1));
+  if (i < 0 || i >= n) return hideTip();
+  const c = result.series[i];
+  const x = simScale.X(i);
+  const line = document.getElementById('hoverLine');
+  line.setAttribute('x1', x); line.setAttribute('x2', x); line.setAttribute('opacity', '.45');
+  const tip = $('tip');
+  tip.innerHTML = '<b>Campaign #' + c.campaign + '</b>' + (c.warmup ? ' <span class="pill">warm-up</span>' : '') + '<br>'
+    + 'priced by: ' + c.source + '<br>'
+    + 'posted ' + cpi(c.posted) + '<br>'
+    + '<i style="background:var(--c-cpi)"></i>settled ' + cpi(c.settled) + '<br>'
+    + '<i style="background:var(--c-truth)"></i>truth ' + cpi(c.truth) + '<br>'
+    + '<i style="background:var(--c-pool)"></i>pool split ' + (c.poolSplit ? cpi(c.poolSplit) : '—') + '<br>'
+    + 'error ' + (c.error === null ? '—' : c.error.toFixed(1) + '%') + ' · refund ' + c.refundShare.toFixed(0) + '%';
+  const px = (x / G.W) * box.width;
+  tip.style.left = Math.min(Math.max(px, 90), box.width - 90) + 'px';
+  tip.classList.remove('hidden');
+});
+$('simChart').addEventListener('mouseleave', hideTip);
+function hideTip() {
+  $('tip').classList.add('hidden');
+  const line = document.getElementById('hoverLine');
+  if (line) line.setAttribute('opacity', '0');
+}
+
+async function compareAll() {
+  $('err').textContent = '';
+  $('allBtn').disabled = true;
+  const seed = Number($('simSeed').value) || 1;
+  const card = $('compareCard');
+  const body = $('compareTable').querySelector('tbody');
+  card.classList.remove('hidden');
+  $('compareSeed').textContent = 'seed ' + seed + ' · ' + Number($('simCount').value) + ' campaigns each';
+  body.innerHTML = MARKETS.map(([id]) => '<tr data-id="' + id + '"><td>' + nameOf(id) + '</td><td colspan="7" style="text-align:left;color:var(--muted)">queued…</td></tr>').join('');
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const results = {};
+  try {
+    for (const [id] of MARKETS) {
+      const row = body.querySelector('[data-id="' + id + '"]');
+      row.children[1].textContent = 'running…';
+      const r = await UI.api('/api/simulate', 'POST', params(id));
+      r.seed = seed;
+      results[id] = r;
+      const s = r.summary;
+      row.innerHTML = '<td>' + nameOf(id) + '</td><td>' + cpi(s.truth) + '</td><td>' + cpi(s.settled) + '</td>'
+        + '<td class="' + (s.error < s.poolSplitError ? 'best' : '') + '">' + s.error.toFixed(1) + '%</td>'
+        + '<td>' + pct(s.poolSplitError) + '</td><td>' + pct(s.refundShare) + '</td><td>' + pct(s.floor) + '</td>'
+        + '<td>' + (s.error - s.floor >= 0 ? '+' : '') + (s.error - s.floor).toFixed(1) + ' pts</td>';
+      row.style.cursor = 'pointer';
+      row.onclick = () => {
+        market = id; renderMarkets();
+        result = results[id]; showResult();
+        for (const tr of body.children) tr.classList.toggle('sel', tr === row);
+        $('resultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+    }
+  } catch (e) {
+    $('err').textContent = e.message;
+  }
+  $('allBtn').disabled = false;
+}
+
+$('simBtn').onclick = runSim;
+$('allBtn').onclick = compareAll;
+$('rerollBtn').onclick = () => { $('simSeed').value = UI.newSeed(); runSim(); };
+$('jsonBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'season-' + result.market + '-seed-' + result.seed + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+renderMarkets();
+</script>
+</body>
+</html>
