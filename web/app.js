@@ -77,11 +77,10 @@ function initHeroBg() {
       float alpha = clamp((glow * 1.55 + bloom * 0.50) * dots * rightFade, 0.0, 1.0);
       alpha *= 1.0 - centerDark * 0.56;
 
-      vec3 base = vec3(0.005, 0.005, 0.005);
-      vec3 finalColor = mix(base, col, clamp(alpha * 1.55, 0.0, 1.0));
-      finalColor += micro * rightFade;
+      vec3 finalColor = col + micro * rightFade;
+      float outAlpha = clamp(alpha * 1.55, 0.0, 1.0);
 
-      gl_FragColor = vec4(finalColor, 1.0);
+      gl_FragColor = vec4(finalColor, outAlpha);
     }
   `;
 
@@ -206,7 +205,7 @@ let META = null;
 const meta = async () => META || (META = await api("/api/meta"));
 
 /* Routing ----------------------------------------------------------------------------------------- */
-const VIEWS = ["home", "advertiser", "creator", "compare"];   // "method" hidden for now; Backtest replaced by Benchmark v0 (benchmark.html)
+const VIEWS = ["home", "advertiser", "creator", "compare"];   // "method" hidden for now; Backtest replaced by Benchmark (benchmark.html)
 const inits = {};
 function route() {
   const name = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home";
@@ -982,7 +981,7 @@ function drawCompare() {
   const root = $("#cmp");
   const node = h(`<div>
     <div class="page-head"><span class="label">Compare</span><h1 class="h2">Try both. Then look at the bill.</h1>
-      <p class="lede">Set up the same campaign two ways, then watch both run through 300 simulated draws of it — 60 apiece across five market conditions, smooth to viral — so the result is a real distribution, not one lucky roll. Same engine as <a href="benchmark.html">Benchmark v0</a>, scoped to your own numbers.</p></div>
+      <p class="lede">Set up the same campaign two ways, then watch both run through 300 simulated draws of it — 60 apiece across five market conditions, smooth to viral — so the result is a real distribution, not one lucky roll. Same engine as <a href="benchmark.html">Benchmark</a>, scoped to your own numbers.</p></div>
     <section class="cmp-step"><span class="label gold">With Clearing</span>
       <div class="panel ours-card">
         <div class="field-row">
@@ -1092,7 +1091,7 @@ const CMP_VERDICT = { blown: ["Overspent", "var(--old)"], overpaid: ["Overpriced
 const cmpLogPos = (x, lo, hi) => { x = Math.max(lo, Math.min(hi, x)); return ((Math.log(x) - Math.log(lo)) / (Math.log(hi) - Math.log(lo))) * 100; };
 const cmpTimes = (x) => (x >= 10 ? x.toFixed(0) : x.toFixed(1)) + "×";
 
-/* A ring split into fine/overpriced/overspent, same idea as Benchmark v0's donuts. */
+/* A ring split into fine/overpriced/overspent, same idea as Benchmark's donuts. */
 function cmpRing(verdicts, size = 108, stroke = 14) {
   const R = (size - stroke) / 2 - 2, C = 2 * Math.PI * R, h = size / 2, fs = Math.max(11, size * 0.19);
   let off = 0;
@@ -1106,12 +1105,12 @@ function cmpRing(verdicts, size = 108, stroke = 14) {
     <text x="${h}" y="${h + fs / 3.4}" text-anchor="middle" font-size="${fs}" font-weight="600" fill="var(--ink)">${pct(verdicts.fine || 0)}</text></svg>`;
 }
 
-/* One square per simulated draw, coloured by outcome — Benchmark v0's waffle grid. */
+/* One square per simulated draw, coloured by outcome — Benchmark's waffle grid. */
 function cmpWaffle(reps, key) {
   return `<div class="cmp-waffle">${reps.map((r) => { const [label, col] = CMP_VERDICT[r[`verdict_${key}`]]; return `<i style="background:${col}" title="#${r.id} · ${esc(MARKET_LABELS[r.scenario] || r.scenario)} · ${label} · ${inr(r[`${key}_spend`])}"></i>`; }).join("")}</div>`;
 }
 
-/* Every draw sorted into how far over budget it landed — Benchmark v0's severity bands. */
+/* Every draw sorted into how far over budget it landed — Benchmark's severity bands. */
 const CMP_BANDS = [["Within budget", 0, 1, "var(--good)"], ["Up to 1.5×", 1, 1.5, "#ffc247"], ["1.5×–2×", 1.5, 2, "#ff8a3d"], ["2×–5×", 2, 5, "#ff5230"], ["Over 5×", 5, Infinity, "var(--old)"]];
 function cmpBandShares(reps, key, budget) {
   return CMP_BANDS.map(([, lo, hi]) => reps.filter((r) => { const x = r[`${key}_spend`] / budget; return lo === 0 ? x <= 1 : x > lo && x <= hi; }).length / reps.length);

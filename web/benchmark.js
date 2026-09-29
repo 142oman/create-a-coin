@@ -1,4 +1,4 @@
-/* Benchmark v0. Standalone: shares only style.css with the rest of the site. */
+/* Benchmark. Standalone: shares only style.css with the rest of the site. */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));

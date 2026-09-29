@@ -1,4 +1,4 @@
-"""Benchmark v0: the old way and Creator Coin on the same simulated campaigns.
+"""Benchmark: the old way and Creator Coin on the same simulated campaigns.
 
 Self-contained on purpose: nothing here is read by the other pages, and it only *reads* the engine
 (`rungs_from`, `settle`, `rung_coins`, `ladder_pay`, `binom_cdf`), so a change to the engine shows up
@@ -420,7 +420,7 @@ def job_status(job_id):
 # --- Compare page: the user's own ladder against Clearing, on this module's synthetic market ---------
 # Used by the /api/compare route. Deliberately not `ladder/compare.py` (which plays both ways against
 # real past campaigns from the generated world) — this reads the same tier distributions, market draws
-# and engine calls as the rest of this file, so the Compare page tells the same story as Benchmark v0.
+# and engine calls as the rest of this file, so the Compare page tells the same story as Benchmark.
 REPS_PER_MARKET = 60   # x5 built-in markets = 300 draws of the user's own campaign — enough for real
                        # percentages and distributions, not the single lucky-or-unlucky draw v0.1 gave
 
@@ -459,7 +459,7 @@ def _compare_rep(rng, scenario, budget, ladder, fair_cpi):
 
 
 def _cmp_stats(rows, key, budget):
-    """The same shape of numbers Benchmark v0 shows, computed over many draws of one fixed campaign
+    """The same shape of numbers Benchmark shows, computed over many draws of one fixed campaign
     instead of over many different campaigns."""
     n = len(rows)
     spend = [r[f"{key}_spend"] for r in rows]
@@ -582,7 +582,7 @@ def method_scores(budget, old_rungs_views, true_cpm, totals):
 
 def random_old_ladder(budget):
     """A starting ladder for the Compare page's "old way" step, generated exactly the way one_campaign
-    builds an advertiser's gut-feel ladder for Benchmark v0: optimal rungs from the true market, each
+    builds an advertiser's gut-feel ladder for Benchmark: optimal rungs from the true market, each
     thrown off by a random feel, a campaign-wide bias, a tilt (steeper or flatter), and per-rung noise.
     Genuinely random each call (not seeded), since this is a starting point to edit, not a result to
     reproduce."""

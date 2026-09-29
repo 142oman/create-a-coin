@@ -1,4 +1,4 @@
-/* Benchmark v0 only. Everything is scoped under .bm so no other page is touched. */
+/* Benchmark only. Everything is scoped under .bm so no other page is touched. */
 .bm { --amber: #e0a24a; padding-top: 48px; display: grid; gap: 28px; }
 #bm-out { display: grid; gap: 30px; }  /* sections are children of #bm-out, not .bm — this is what was missing */
 .bm > *, .bm-grid > *, .bm-two > *, .bm-3 > * { min-width: 0; }

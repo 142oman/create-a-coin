@@ -75,7 +75,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -.035em; font-weight: 600; }
 .hero > *:nth-child(3) { animation-delay: .14s; }
 .hero > *:nth-child(4) { animation-delay: .22s; }
 .hero > *:nth-child(5) { animation-delay: .34s; }
-.hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: .6; mix-blend-mode: screen; animation: none; }
+.hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: .85; animation: none; }
 .hero .display { font-size: clamp(46px, 7.6vw, 116px); line-height: .94; letter-spacing: -.045em; }
 .hero .display em { color: var(--gold); }
 .hero .lede { font-size: clamp(18px, 1.6vw, 21px); max-width: 600px; }
@@ -390,7 +390,7 @@ svg.chart text.lab { font: 500 11px var(--mono); fill: var(--ink-2); }
 .cmp-rep b { font-variant-numeric: tabular-nums; font-size: 12.5px; white-space: nowrap; min-width: 62px; text-align: right; }
 @media (max-width: 640px) { .cmp-rep { grid-template-columns: minmax(0, 1fr); gap: 4px; } .cmp-rep > .label { margin-top: 6px; } }
 
-/* Compare page v0.2: the richer, many-draws toolkit, borrowed from Benchmark v0 */
+/* Compare page v0.2: the richer, many-draws toolkit, borrowed from Benchmark */
 .cmp-rings { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 4px 2px 6px; }
 .cmp-ringcard { display: grid; gap: 6px; justify-items: center; }
 .cmp-ringcard svg { width: 76px; height: 76px; display: block; }

@@ -1,7 +1,7 @@
 """Web app: the landing page, the advertiser and creator flows, and Compare, over a small JSON API.
-Standard library only. Benchmark v0 (web/benchmark.html) is served as a static page; its API routes
+Standard library only. Benchmark (web/benchmark.html) is served as a static page; its API routes
 below are self-contained and never touch this module's World/State. Backtest, the page that used to
-live here, is gone — replaced by Benchmark v0; its CLI (`python -m ladder backtest`) is unaffected."""
+live here, is gone — replaced by Benchmark; its CLI (`python -m ladder backtest`) is unaffected."""
 import json
 import threading
 from dataclasses import asdict
@@ -80,7 +80,7 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             if url.path == "/api/meta":
                 return self._json(meta())
-            if url.path == "/api/benchmark":   # Benchmark v0: self-contained, reads nothing from the world
+            if url.path == "/api/benchmark":   # Benchmark: self-contained, reads nothing from the world
                 return self._json(benchmark.run(int(q.get("seed", 1)), int(q.get("n", 400)), q.get("scenario", "all")))
             if url.path == "/api/benchmark/start":
                 return self._json({"id": benchmark.start_job(int(q.get("seed", 1)), int(q.get("n", 400)), q.get("scenario", "all"), q.get("mode") == "unbiased")})

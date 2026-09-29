@@ -33,10 +33,10 @@ No packages to install. The data and results are committed, so `serve` works str
 - **Compare:** a budget, a fair CPI, and the old way's own rung table (random by default, editable),
   then both run through 300 simulated markets and a scorecard rates each on budget adherence, creator
   retention, tier fairness and brand ROI.
-- **Backtest:** eight measures across the generated history, with the recipe that generates it.
-  Change it and rebuild.
-- **Benchmark v0:** hundreds of simulated campaigns, old ladder vs Clearing, not the generated world —
-  its own synthetic market, so it can't be skewed by (or skew) anything else in the app.
+- **Benchmark:** hundreds of simulated campaigns, old ladder vs Clearing, not the generated world —
+  its own synthetic market, so it can't be skewed by (or skew) anything else in the app. Replaces the
+  old Backtest page; `python -m ladder backtest` (eight measures over the generated history) is still
+  a separate CLI command, unaffected.
 - **Method:** the docs.
 
 ## Layout
@@ -49,6 +49,6 @@ No packages to install. The data and results are committed, so `serve` works str
 | `ladder/history.py` | replays history in date order, no look-ahead |
 | `ladder/simulate.py` | new campaigns for the advertiser and creator flows |
 | `ladder/backtest.py`, `validate.py`, `report.py` | the pages' analyses and reports, against the generated world |
-| `ladder/benchmark.py` | Benchmark v0 and Compare: a synthetic market, not the generated world, so a change to it can't affect the other pages |
+| `ladder/benchmark.py` | Benchmark and Compare: a synthetic market, not the generated world, so a change to it can't affect the other pages |
 | `ladder/server.py`, `web/` | the web app (standard-library server, plain JS) |
 | `archive/` | earlier designs, kept for reference |
