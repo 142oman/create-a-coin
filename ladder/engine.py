@@ -51,7 +51,8 @@ def rung_coins(views, rungs):
 
 
 def settle(budget, coins, reference):
-    """One price per coin. Returns (price per view, regime)."""
+    """One price per coin. Returns (price per view, regime). `reference` is the brand's expected CPI
+    per view when it gave one, else the market reference."""
     if coins <= 0:
         return 0.0, "empty"
     pool = budget / coins
@@ -82,7 +83,12 @@ def fraud_check(daily, usual, cut):
 
 
 def binom_cdf(k, n, p):
-    return sum(math.comb(n, i) * p ** i * (1 - p) ** (n - i) for i in range(k + 1))
+    if n <= 500:
+        return sum(math.comb(n, i) * p ** i * (1 - p) ** (n - i) for i in range(k + 1))
+    # large n: math.comb overflows a float, so sum in log space
+    lp, lq, top = math.log(p), math.log(1 - p), math.lgamma(n + 1)
+    return min(1.0, sum(math.exp(top - math.lgamma(i + 1) - math.lgamma(n - i + 1) + i * lp + (n - i) * lq)
+                        for i in range(k + 1)))
 
 
 def _views_to(post, t):
@@ -90,7 +96,7 @@ def _views_to(post, t):
     return sum(post["daily"][:max(0, t - post["day"])])
 
 
-def run(summary, budget, days, posts, categories, formats, with_timeline=False):
+def run(summary, budget, days, posts, categories, formats, with_timeline=False, brand_cpi=None):
     """Run and settle one campaign.
 
     posts: dicts with post_id, creator_id, category, platform, tier, format, day (posting day from 0),
@@ -105,7 +111,7 @@ def run(summary, budget, days, posts, categories, formats, with_timeline=False):
     live_rungs = {}                     # cold segments: rungs built from this campaign's own posts
     factor = {group(p): 1.0 for p in posts}
     cut = summary.cutoffs()
-    usual = {p["creator_id"]: summary.usual(p["creator_id"]) for p in posts}
+    usual = {p["creator_id"]: summary.usual(p["creator_id"].split("~")[0]) for p in posts}   # clones share the original's history
     alpha = (1 - CONFIDENCE) / len(CHECKS)
     events, factor_at, rungs_at = [], [], []
 
@@ -159,6 +165,8 @@ def run(summary, budget, days, posts, categories, formats, with_timeline=False):
             events.append({"day": days, "kind": "cold_start", "segment": list(s), "rungs": built, "previous": None})
 
     reference, ref_basis = summary.reference(categories, formats)
+    if brand_cpi:
+        reference, ref_basis = brand_cpi, "brand's expected CPI"
     detail, fraud_ids, held_any = [], set(), False
     for p in posts:
         held, reason = fraud_check(p["daily"], usual[p["creator_id"]], cut)
@@ -203,6 +211,7 @@ def run(summary, budget, days, posts, categories, formats, with_timeline=False):
 def _timeline(posts, days, budget, reference, rungs_for, factor_at, rungs_at, seg, group, usual, cut):
     """Day by day: views, coins, coin price, spend so far if it ended that day, creators, posts."""
     out = []
+    untouched = {group(q): 1.0 for q in posts}   # no Fair Reach shrink yet (built once, not per post)
     for d in range(days):
         t = d + 1
         fac = next((f for day, f in reversed(factor_at) if day <= t), None)
@@ -219,7 +228,7 @@ def _timeline(posts, days, budget, reference, rungs_for, factor_at, rungs_at, se
                 continue
             views += v
             coins += v
-            f0 = fac if fac is not None else {group(q): 1.0 for q in posts}
+            f0 = fac if fac is not None else untouched
             spend_coins += rung_coins(v, rungs_for(seg(p), group(p), f0, live))
         price, regime = settle(budget, coins, reference)
         out.append({"day": d, "views": views, "coins": coins, "price": price, "regime": regime,

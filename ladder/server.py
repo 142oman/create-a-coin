@@ -10,7 +10,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from . import backtest, compare, data, simulate, validate
+from . import backtest, benchmark, data, simulate, validate
 from .config import ALL_FORMATS, CATEGORIES, FORMATS, NAME, PLATFORM_OF, REVIEW_DAYS, TIERS
 from .history import replay
 from .world import Recipe, generate
@@ -93,6 +93,14 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json({"backtest": s.backtest, "validation": s.validation, "seconds": s.built_in,
                                    "recipe": asdict(s.world.recipe), "params": s.world.params,
                                    "counts": meta()["counts"]})
+            if url.path == "/api/benchmark":   # Benchmark v0: self-contained, reads nothing from the world
+                return self._json(benchmark.run(int(q.get("seed", 1)), int(q.get("n", 400)), q.get("scenario", "all")))
+            if url.path == "/api/benchmark/start":
+                return self._json({"id": benchmark.start_job(int(q.get("seed", 1)), int(q.get("n", 400)), q.get("scenario", "all"), q.get("mode") == "unbiased")})
+            if url.path == "/api/benchmark/progress":
+                return self._json(benchmark.job_status(q.get("id", "")))
+            if url.path == "/api/compare/random-ladder":   # a starting ladder for the Compare page's old way
+                return self._json({"rungs": benchmark.random_old_ladder(float(q.get("budget", 500000)))})
             if url.path == "/api/typical-budget":
                 s = State.ready()
                 cats = [c for c in q.get("categories", "").split(",") if c]
@@ -123,15 +131,14 @@ class Handler(SimpleHTTPRequestHandler):
             if path == "/api/publish":
                 return self._json(simulate.simulate(s.world, s.summary, body.get("categories"), body.get("formats"),
                                                     body["budget"], body["days"], body.get("seed"),
-                                                    body.get("scenario") or "normal"))
+                                                    body.get("scenario") or "normal", max_cpm=body.get("max_cpm")))
             if path == "/api/creator/campaigns":
-                return self._json(simulate.campaign_cards(s.world, body["creator_id"], int(body.get("seed", 1))))
+                return self._json(simulate.campaign_cards(s.world, s.summary, body["creator_id"], int(body.get("seed", 1))))
             if path == "/api/creator/run":
                 return self._json(simulate.creator_run(s.world, s.summary, body["creator_id"], body["card"],
                                                        int(body.get("seed", 1))))
-            if path == "/api/compare":
-                return self._json(compare.compare(s.world, body.get("categories"), body.get("formats"),
-                                                  body["budget"], body["old"]))
+            if path == "/api/compare":   # benchmark.py's synthetic market, not ladder/compare.py's real campaigns
+                return self._json(benchmark.compare(body["budget"], body["old"]["rungs"], body.get("fair_cpm")))
         except (KeyError, ValueError, TypeError) as e:
             return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
         return self._json({"error": "not found"}, HTTPStatus.NOT_FOUND)

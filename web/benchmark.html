@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Benchmark v0 · Clearing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="benchmark.css">
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-in">
+      <a class="logo" href="index.html#home"><i></i>Clearing</a>
+      <nav class="links" aria-label="Sections">
+        <a href="index.html#advertiser">Advertiser</a>
+        <a href="index.html#creator">Creator</a>
+        <a href="index.html#compare">Compare</a>
+        <a href="index.html#backtest">Backtest</a>
+        <a href="benchmark.html" class="active">Benchmark v0</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="bm">
+    <section class="bm-top">
+      <span class="label gold">Benchmark v0</span>
+      <h1 class="h2">Same budget. Same gut feel.<br>Old ladder vs Clearing.</h1>
+      <p class="lede">Hundreds of simulated campaigns. Each gets a random budget, an advertiser's gut-feel CPI and a hand-built rung ladder, then meets a random market. Clearing is given the same budget and the same feel. Nothing else.</p>
+      <form id="bm-form" class="bm-form">
+        <label>Market<select id="bm-scn"></select></label>
+        <label>Campaigns<input id="bm-n" type="number" min="1" max="1000" value="400"></label>
+        <label>Seed<input id="bm-seed" type="number" min="1" value="1"></label>
+        <button class="cta gold" type="submit">Run again</button>
+        <button class="cta ghost" type="button" id="bm-rand">New seed</button>
+        <button class="tog" type="button" id="bm-unb" aria-pressed="false" title="Draw everything at random. Nothing hand-picked.">Unbiased mode <i></i></button>
+      </form>
+    </section>
+
+    <section id="bm-loader" class="bm-loader" hidden aria-live="polite">
+      <div class="bm-lrow"><b id="bm-stage">Starting</b><span id="bm-pct">0%</span></div>
+      <div class="bm-lbar"><i id="bm-fill"></i></div>
+      <small id="bm-count" class="muted"></small>
+    </section>
+
+    <div id="bm-out"></div>
+
+    <details class="bm-how">
+      <summary>How a campaign is simulated</summary>
+      <div class="how-story">
+        <div class="hs"><b>1 · An advertiser shows up</b><p>He has a budget (₹20K–₹2 Cr) and a gut feel for price per view. 100 means he's got it right; higher or lower means he's off.</p></div>
+        <div class="hs"><b>2 · He builds a ladder, by gut</b><p>One ladder, same 8 rungs for every creator size, priced so that — if his feel were right — it would spend exactly the budget.</p></div>
+        <div class="hs"><b>3 · A market shows up</b><p>Creators of every size post. Sometimes a crowd floods in, sometimes too few arrive, sometimes a post goes viral.</p></div>
+        <div class="hs"><b>4 · Both get paid, and we compare</b><p>The old ladder pays whatever crosses a rung — no ceiling. Clearing gets the same budget and feel, builds its own rungs per size from past data, and never pays past the budget.</p></div>
+      </div>
+      <p class="muted">Unbiased mode (the switch above) swaps every fixed number below for a wide random draw — its banner lists exactly what.</p>
+      <details class="bm-how2">
+        <summary>The exact numbers</summary>
+        <ol>
+          <li><b>Budget</b> is drawn between ₹20,000 and ₹2 crore (log-uniform).</li>
+          <li><b>CPI feel</b> (5 to 500, 100 = the market's true CPI). Above 100 he expects more people than the budget buys, below 100 fewer. His raw number goes straight to Clearing as its reference price — unmodified, exactly as the real app does.</li>
+          <li><b>Clearing's price</b> is <code>engine.settle</code>, the same function the live app calls. If enough views arrive that the budget would split to a price at or under his reference, that lower, liquidity-set price wins and his number is ignored (the "plenty" regime). If views are thin and the budget would split to a price above his reference, the price converges toward a negotiated point between the two — the geometric mean of the pool price and his reference (the "thin" regime). A wrong reference only ever matters in a thin market, and then it's pulled toward reality, not clipped by anything I added.</li>
+          <li><b>Rungs, old way.</b> Eight rungs, one ladder for every creator. Each has a score (5 to 300) for where he thinks 80% will cross: 100 is right, more is too high, less too low. The scores share a campaign-wide bias and a tilt, on top of his feel. Payouts are sized so a market that behaves as he pictures spends exactly the budget.</li>
+          <li><b>Creators</b> come in four sizes (nano, micro, mid, macro), about 1,000× apart in views, with lognormal views inside each.</li>
+          <li><b>Market.</b> Smooth, abundant (a crowd floods in), scarce (too few arrive), one viral surge, or many. A surge lifts a random share of one size group's posts at once; a few single posts also spike. His rungs nudge the crowd only slightly.</li>
+          <li><b>Clearing</b> builds rungs per size from 300 past posts of that size, runs one Fair Reach check per size, and prices with the engine's own <code>settle</code>. The engine is read, never changed, so other pages are unaffected.</li>
+          <li><b>Overspent</b> = paid more than the budget, by any amount. <b>Overpriced</b> = within budget, but the money paid past a "fair cost" (1.5× the true price for the reach delivered) is itself more than half the budget — a real, large overpay, not just a high price on a small spend. <b>Paid at or under the true price</b> = the price actually paid per view was at or below it. The true price is only a guide; with one seller and many buyers, overpaying is the real risk.</li>
+        </ol>
+        <p class="muted">No fraud check, by design. Fair Reach runs once on final views instead of at 25/50/75%. Creators are paid on final views only. Every number here comes from assumptions in <code>ladder/benchmark.py</code>, not from measured data.</p>
+      </details>
+    </details>
+  </main>
+  <script src="benchmark.js"></script>
+</body>
+</html>

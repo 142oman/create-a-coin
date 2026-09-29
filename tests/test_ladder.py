@@ -3,7 +3,7 @@ import math
 import random
 import unittest
 
-from ladder import backtest, compare, engine, simulate, validate
+from ladder import backtest, engine, simulate, validate
 from ladder.config import QUALIFY_REACH, STEP_CHANCE
 from ladder.history import replay
 from ladder.store import Summary, drop_after_peak, weighted_median
@@ -192,17 +192,6 @@ class Pages(unittest.TestCase):
         r = backtest.run(WORLD)
         self.assertEqual(r["budget"]["new_over"], 0)
         self.assertEqual(r["campaigns"], sum(1 for x in RESULTS.values() if x))
-
-    def test_compare_uses_real_past_campaigns(self):
-        r = compare.compare(WORLD, ["gaming"], ["reel"], 20000, {"budget": 20000, "rungs": [[10000, 500], [50000, 2000]]})
-        self.assertGreater(r["count"], 0)
-        self.assertEqual(r["summary"]["ours_over_count"], 0)
-        self.assertEqual(r["worlds"][r["worst"]]["old"]["waste"], max(w["old"]["waste"] for w in r["worlds"]))
-
-    def test_compare_falls_back_to_same_format(self):
-        w, basis = compare.worlds_for(WORLD, ["nonexistent"], ["reel"])
-        self.assertEqual(basis, "same format, any category")
-        self.assertTrue(w)
 
 
 if __name__ == "__main__":

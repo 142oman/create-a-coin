@@ -3,23 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Creator Coin</title>
+  <title>Clearing</title>
   <meta name="description" content="Pay creators for real views, at the price the market sets. Never over budget.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23f2c14e'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='5' y='16' width='4' height='11' fill='%23f2c14e'/%3E%3Crect x='14' y='9' width='4' height='18' fill='%23f2c14e'/%3E%3Crect x='23' y='4' width='4' height='23' fill='%23f2c14e'/%3E%3C/svg%3E">
 </head>
 <body>
   <header class="nav">
     <div class="nav-in">
-      <a class="logo" href="#home"><i></i>Creator Coin</a>
+      <a class="logo" href="#home"><i></i>Clearing</a>
       <nav class="links" aria-label="Sections">
         <a href="#advertiser" data-view="advertiser">Advertiser</a>
         <a href="#creator" data-view="creator">Creator</a>
         <a href="#compare" data-view="compare">Compare</a>
         <a href="#backtest" data-view="backtest">Backtest</a>
+        <a href="benchmark.html">Benchmark v0</a>
       </nav>
       <a class="cta" href="#advertiser">Start a campaign</a>
     </div>
@@ -28,96 +29,193 @@
       <a href="#creator" data-view="creator">Creator</a>
       <a href="#compare" data-view="compare">Compare</a>
       <a href="#backtest" data-view="backtest">Backtest</a>
+      <a href="benchmark.html">Benchmark v0</a>
     </nav>
   </header>
 
   <main>
     <!-- HOME ------------------------------------------------------------------------------------->
     <section id="view-home" class="view">
+
       <div class="hero">
-        <div class="coin-orbit" aria-hidden="true"><div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="core"></div><i class="dot"></i><i class="dot"></i><i class="dot"></i></div>
-        <span class="label gold">For brands and the creators who make them famous</span>
-        <h1 class="display">Pay for views.<br><em>Not guesses.</em></h1>
-        <p class="lede">You set a budget. Creators post. Every real view becomes a coin, and the market decides what a coin is worth. Nobody overpays. Nobody gets stiffed.</p>
+        <span class="label gold">Clearing</span>
+        <h1 class="display">Price every view.<br><em>Let the market find it.</em></h1>
+        <p class="lede">Give us a budget and a rough price per impression. We discover the true price, continuously, so a reward can never be mispriced.</p>
         <div class="hero-actions">
           <a class="cta gold" href="#advertiser">Start a campaign</a>
-          <a class="cta ghost" href="#creator">I'm a creator</a>
+          <a class="cta ghost" href="#compare">Compare with today</a>
         </div>
+        <canvas id="hero-viz" class="hero-viz" aria-hidden="true"></canvas>
       </div>
 
-      <section class="band reveal">
-        <div class="band-head">
-          <span class="label">The problem</span>
-          <h2 class="h2">Right now, someone guesses.</h2>
-          <p class="lede">Every campaign gets a payout ladder made up on gut feel: 10K views gets ₹500, 50K gets ₹2,000. Guess wrong and it goes badly.</p>
-        </div>
-        <div class="stat-row" data-problem>
-          <div><span class="big num">–</span><p>campaigns blew their budget</p></div>
-          <div><span class="big num">–</span><p>the worst one, over budget</p></div>
-          <div><span class="big num">–</span><p>of small creators ever got paid</p></div>
-        </div>
-        <p class="muted" data-problem-note></p>
-      </section>
-
-      <section class="band reveal">
-        <div class="band-head">
-          <span class="label">How it works</span>
-          <h2 class="h2">Four questions. Then we handle it.</h2>
-        </div>
-        <div class="steps">
-          <div><b>01</b><h3>Set a budget</h3><p>The most you'll ever pay. That's the only number you choose.</p></div>
-          <div><b>02</b><h3>Views become coins</h3><p>Every real view a creator gets you mints one coin. Fakes mint nothing.</p></div>
-          <div><b>03</b><h3>The market prices them</h3><p>Your budget backs all the coins. More views, cheaper coins.</p></div>
-          <div><b>04</b><h3>Too few? Money back</h3><p>If views come in thin, you pay a fair price and keep the rest.</p></div>
-        </div>
-      </section>
-
-      <section class="band reveal split">
-        <div class="band-head">
-          <span class="label">For creators</span>
-          <h2 class="h2">Goals built for you.</h2>
-          <p class="lede">Your first goal is what 4 in 5 creators your size actually hit. Each one after is a real stretch, not a fantasy. Slow week for everyone? Goals come down. Everyone gets the same price per coin, so you get your exact share.</p>
-          <div><a class="cta ghost" href="#creator">See it as a creator</a></div>
-        </div>
-        <div class="ladder-art" aria-hidden="true">
-          <div class="rung"><span class="label">Goal 1</span><div class="bar"><span style="width:28%"></span></div><span class="num">2.1K</span></div>
-          <div class="rung"><span class="label">Goal 2</span><div class="bar"><span style="width:46%;animation-delay:.2s"></span></div><span class="num">6.4K</span></div>
-          <div class="rung"><span class="label">Goal 3</span><div class="bar"><span style="width:63%;animation-delay:.4s"></span></div><span class="num">15K</span></div>
-          <div class="rung"><span class="label">Goal 4</span><div class="bar"><span style="width:80%;animation-delay:.6s"></span></div><span class="num">32K</span></div>
-          <div class="rung"><span class="label">Goal 5</span><div class="bar"><span style="width:96%;animation-delay:.8s"></span></div><span class="num">70K</span></div>
+      <!-- 1. PROBLEM -->
+      <section class="band">
+        <span class="label ch-label"><b>01</b>The problem</span>
+        <div class="ch-main">
+          <div class="story">
+            <p class="beat">An advertiser arrives with a <em>budget</em> and wants to advertise through creators.</p>
+            <p class="beat">To pay them, they must define a reward: <em>this many views earns this much.</em></p>
+            <p class="beat">That number is <em class="bad">arbitrary.</em> They can't know how publishers will behave, or how audiences will respond to them.</p>
+            <p class="beat">So every reward ladder is a <em class="bad">gamble.</em></p>
+            <p class="beat">Lose, and they <em class="bad">overspend the budget.</em> Set the price high for an easy target, and they <em class="bad">overpay for every impression.</em></p>
+          </div>
+          <div class="fig fig-2 rv" aria-hidden="true">
+            <div class="fig-card">
+              <span class="label">The budget</span>
+              <div class="track"><span class="fill"></span><i class="cap"></i></div>
+              <small>Payouts run past the line.</small>
+            </div>
+            <div class="fig-card">
+              <span class="label">A ladder set in advance</span>
+              <div class="lad">
+                <div class="lr" style="--r:0.0s"><span class="label">Step 1</span><div class="lt"><b class="mk" style="left:20%"></b><i style="left:45%;--n:0"></i><i style="left:49%;--n:1"></i><i style="left:36%;--n:2"></i><i style="left:76%;--n:3"></i><i style="left:55%;--n:4"></i><i style="left:60%;--n:5"></i><i style="left:39%;--n:6"></i><i style="left:35%;--n:7"></i><i style="left:34%;--n:8"></i></div><em>Too easy</em></div>
+                <div class="lr" style="--r:0.35s"><span class="label">Step 2</span><div class="lt"><b class="mk" style="left:40%"></b><i style="left:47%;--n:0"></i><i style="left:71%;--n:1"></i><i style="left:81%;--n:2"></i><i style="left:64%;--n:3"></i><i style="left:94%;--n:4"></i><i style="left:49%;--n:5"></i><i style="left:60%;--n:6"></i><i style="left:79%;--n:7"></i><i style="left:80%;--n:8"></i></div><em>Too easy</em></div>
+                <div class="lr" style="--r:0.7s"><span class="label">Step 3</span><div class="lt"><b class="mk" style="left:70%"></b><i style="left:31%;--n:0"></i><i style="left:25%;--n:1"></i><i style="left:19%;--n:2"></i><i style="left:14%;--n:3"></i><i style="left:24%;--n:4"></i><i style="left:21%;--n:5"></i><i style="left:9%;--n:6"></i><i style="left:24%;--n:7"></i><i style="left:25%;--n:8"></i></div><em>Too hard</em></div>
+                <div class="lr" style="--r:1.0499999999999998s"><span class="label">Step 4</span><div class="lt"><b class="mk" style="left:92%"></b><i style="left:18%;--n:0"></i><i style="left:16%;--n:1"></i><i style="left:25%;--n:2"></i><i style="left:24%;--n:3"></i><i style="left:46%;--n:4"></i><i style="left:52%;--n:5"></i><i style="left:29%;--n:6"></i><i style="left:11%;--n:7"></i><i style="left:44%;--n:8"></i></div><em>Too hard</em></div>
+              </div>
+              <small>Dots are creators' real results. Every step was a guess, and it shows.</small>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section class="band reveal">
-        <div class="band-head">
-          <span class="label">What you can count on</span>
-          <h2 class="h2">Two promises. Kept every time.</h2>
-        </div>
-        <div class="promise">
-          <div><span class="label gold">Budget</span><h3>Never a rupee over.</h3><p>Not "usually". The price is budget ÷ coins, so it can't go over. It's maths, not a forecast.</p></div>
-          <div><span class="label gold">Fraud</span><h3>Bought views don't get paid.</h3><p>Bought views arrive in a burst and stop dead. Real ones fade slowly. We hold the cliffs, check them, and never pay for fakes.</p></div>
+      <!-- 2. HOW MARKETS DO IT -->
+      <section class="band">
+        <span class="label ch-label"><b>02</b>What a solution looks like</span>
+        <div class="ch-main">
+          <div class="story">
+            <p class="beat">Real ad markets don't guess prices. <em>Bidders compete, and the market discovers the price.</em></p>
+            <p class="beat dim">Nobody sets it by hand. It's how advertising already works, at enormous scale.</p>
+          </div>
+          <div class="fig fig-book rv" aria-hidden="true">
+            <div class="book">
+              <div class="side bids">
+                <i style="--a:1;--b:.62;--d:0s"></i><i style="--a:.86;--b:.55;--d:-.4s"></i><i style="--a:.72;--b:.5;--d:-.8s"></i><i style="--a:.58;--b:.42;--d:-1.2s"></i><i style="--a:.44;--b:.34;--d:-1.6s"></i><i style="--a:.3;--b:.24;--d:-2s"></i>
+              </div>
+              <div class="mid"><em>price discovered</em></div>
+              <div class="side asks">
+                <i style="--a:.3;--b:.24;--d:-2s"></i><i style="--a:.44;--b:.34;--d:-1.6s"></i><i style="--a:.58;--b:.42;--d:-1.2s"></i><i style="--a:.72;--b:.5;--d:-.8s"></i><i style="--a:.86;--b:.55;--d:-.4s"></i><i style="--a:1;--b:.62;--d:0s"></i>
+              </div>
+            </div>
+          </div>
+          <div class="plist gold">
+            <div class="rv"><b>01</b><h3>No bidding market.</h3><p>Creator campaigns have no crowd of advertisers competing, so nothing reveals the price.</p></div>
+            <div class="rv"><b>02</b><h3>Sticky placement.</h3><p>A live post can't be swapped for an advertiser who pays more. So we need a way to pay fairly for reach that has already happened, without breaking the budget.</p></div>
+          </div>
         </div>
       </section>
 
-      <section class="band reveal">
-        <div class="band-head">
-          <span class="label">Did it work?</span>
-          <h2 class="h2">Same posts. Paid both ways.</h2>
-          <p class="lede" data-proof-note>Every past campaign, replayed with its real posts, paid the old way and our way.</p>
+      <!-- 3. SOLUTION -->
+      <section class="band">
+        <span class="label ch-label"><b>03</b>The solution</span>
+        <div class="ch-main">
+          <div class="story">
+            <p class="beat">You give us two things: a <em>budget</em>, and a rough <em>price per impression (CPI)</em> you'd be happy with.</p>
+            <p class="beat">That's all. <em>Then we do our thing.</em></p>
+          </div>
+          <div class="group">
+            <span class="label">Under the hood</span>
+            <p class="lede">Market formation, a second pegged liquid commodity, and inflation minting, working together to find the true price of an impression.</p>
+          </div>
+          <div class="fig fig-3 fig-mech rv" aria-hidden="true">
+            <div class="fig-card pool">
+              <span class="label">Locked pool</span>
+              <div class="tank"><span class="lvl"></span><span class="lock">fixed</span></div>
+            </div>
+            <div class="fig-card supply">
+              <span class="label">Impressions minted</span>
+              <div class="tank"><span class="lvl"></span>
+                <i class="drop" style="--x:22%;--d:0s"></i><i class="drop" style="--x:44%;--d:-.5s"></i><i class="drop" style="--x:66%;--d:-1s"></i><i class="drop" style="--x:82%;--d:-.25s"></i><i class="drop" style="--x:34%;--d:-.75s"></i>
+              </div>
+            </div>
+            <div class="fig-card price">
+              <span class="label">Price per impression</span>
+              <div class="tank"><span class="lvl"></span><span class="peg"></span></div>
+            </div>
+          </div>
+          <div class="plist gold">
+            <div class="rv"><b>01</b><h3>Market formation</h3><p>A locked pool of value meets a growing supply of impressions. Where they meet, a market forms. Its clearing price is the price.</p></div>
+            <div class="rv"><b>02</b><h3>Inflation minting</h3><p>Verified impressions are minted as they happen. Supply grows only with real reach, and each new unit dilutes the price.</p></div>
+            <div class="rv"><b>03</b><h3>Pegged liquid commodity</h3><p>A second commodity, pegged to your rough CPI, stays liquid against the pool. It anchors the price while supply is thin.</p></div>
+            <div class="rv"><b>04</b><h3>Continuous clearing</h3><p>The price is recomputed as supply changes, and settles when the campaign ends.</p></div>
+          </div>
+          <p class="muted honest">This is hard to build. The price moves with every impression, the peg has to hold while supply expands, and settlement has to reconcile exactly.</p>
         </div>
-        <div class="stat-row" data-proof>
-          <div><span class="big num">–</span><p>campaigns over budget with us</p></div>
-          <div><span class="big num">–</span><p>per 1,000 real views, down from –</p></div>
-          <div><span class="big num">–</span><p>of small creators paid, up from –</p></div>
+      </section>
+
+      <!-- 4. RESULT -->
+      <section class="band">
+        <span class="label ch-label"><b>04</b>The result</span>
+        <div class="ch-main">
+          <div class="story">
+            <p class="beat">We always find the <em>true price</em> of an impression.</p>
+            <p class="beat">The price comes from real reach, <em>not from a guess.</em></p>
+            <p class="beat">Advertisers always pay the <em>fair price.</em> Publishers are always paid the <em>fair price.</em></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. RUNGS -->
+      <section class="band">
+        <span class="label ch-label"><b>05</b>What that unlocks</span>
+        <div class="ch-main">
+          <div class="story">
+            <p class="beat">A rung is just a target. <em>You never have to guess its price.</em> The mechanism works it out.</p>
+            <p class="beat">Building rungs stops being a financial decision. It becomes a <em>UX and gamification</em> problem.</p>
+          </div>
+          <div class="fig fig-rungs rv" id="rungs" aria-hidden="true">
+            <div class="r" data-start="8" data-reach="30" data-verdict="bad" data-price="₹ 38 / 1K"><span class="label">Rung 1</span><div class="t"><s></s><i></i></div><span class="st"></span><span class="pp"></span></div>
+            <div class="r" data-start="56" data-reach="56" data-verdict="ok" data-price="₹ 41 / 1K"><span class="label">Rung 2</span><div class="t"><s></s><i></i></div><span class="st"></span><span class="pp"></span></div>
+            <div class="r" data-start="96" data-reach="80" data-verdict="bad" data-price="₹ 47 / 1K"><span class="label">Rung 3</span><div class="t"><s></s><i></i></div><span class="st"></span><span class="pp"></span></div>
+            <small>Rungs are set, checked against real reach, and reset if they're too easy or too hard. The price appears for whichever rung stands. Values are illustrative.</small>
+          </div>
+          <div class="group">
+            <span class="label">How rungs are set</span>
+            <div class="plist gold">
+              <div class="rv"><b>01</b><h3>From past data.</h3><p>Starting rungs are built from previous campaigns.</p></div>
+              <div class="rv"><b>02</b><h3>Adapted live.</h3><p>If the past doesn't match this campaign, rungs ease or tighten online until they find an equilibrium.</p></div>
+              <div class="rv"><b>03</b><h3>Difficulty is a dial.</h3><p>How hard the game feels is entirely the admin's choice.</p></div>
+            </div>
+          </div>
+          <p class="beat solo">Whatever the rungs are, the price is right. <em>Nobody guesses.</em></p>
+        </div>
+      </section>
+
+      <!-- 6. WHAT DISAPPEARS -->
+      <section class="band">
+        <span class="label ch-label"><b>06</b>What disappears</span>
+        <div class="ch-main">
+          <div class="maps">
+            <article class="rv">
+              <div class="was"><b>×</b><span>Setting an arbitrary reward.</span></div>
+              <div><h3>There's no price to set.</h3><p>Only rungs.</p></div>
+            </article>
+            <article class="rv">
+              <div class="was"><b>×</b><span>Unpredictable publishers and audiences.</span></div>
+              <div><h3>The market absorbs them.</h3><p>The price adjusts as real reach arrives.</p></div>
+            </article>
+            <article class="rv">
+              <div class="was"><b>×</b><span>Every ladder a gamble.</span></div>
+              <div><h3>A ladder can't be financially wrong.</h3><p>The mechanism prices it.</p></div>
+            </article>
+            <article class="rv">
+              <div class="was"><b>×</b><span>Overspending the budget.</span></div>
+              <div><h3>The pool is a ceiling.</h3><p>Nothing beyond it can be paid.</p></div>
+            </article>
+            <article class="rv">
+              <div class="was"><b>×</b><span>Overpaying for each impression.</span></div>
+              <div><h3>The price is discovered, not declared.</h3><p>An easy target can't inflate it.</p></div>
+            </article>
+          </div>
         </div>
       </section>
 
       <section class="band final reveal">
         <span class="label gold">That's the whole setup</span>
-        <h2 class="display">Four questions.<br>Thirty seconds.</h2>
-        <div class="hero-actions"><a class="cta gold" href="#advertiser">Start a campaign</a><a class="cta ghost" href="#compare">Compare with the old way</a></div>
+        <h2 class="display">Two numbers.<br><em>Then the market.</em></h2>
+        <div class="hero-actions"><a class="cta gold" href="#advertiser">Start a campaign</a><a class="cta ghost" href="#backtest">See how it's tested</a></div>
       </section>
-      <footer class="foot"><span>Creator Coin · a proposal for Meme'd</span><span>Everything here runs on generated data. <a href="#backtest">See how it's made.</a></span></footer>
+      <footer class="foot"><span>Clearing · a proposal for Meme'd</span><span><a href="#backtest">See the testing.</a></span></footer>
     </section>
 
     <!-- ADVERTISER ------------------------------------------------------------------------------>

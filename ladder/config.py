@@ -17,8 +17,9 @@ QUALIFY_REACH = 0.8
 # point between "too far to chase" and "too cheap to climb".
 STEP_CHANCE = 0.5
 
-# Rungs per ladder: the threshold plus four, the size of the brief's example ladder.
-RUNGS = 5
+# Rungs per ladder: the threshold plus seven. More rungs leave less of a post's reach between two
+# rungs (unpaid, so refunded), at the price of a longer ladder than the brief's five-rung example.
+RUNGS = 8
 
 # Held posts: settlement waits at most this many days for review. Nobody is paid before the price is
 # final. A post not cleared by then counts as fraud (the flagged creator must show the views are real).
