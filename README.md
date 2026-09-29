@@ -30,10 +30,13 @@ No packages to install. The data and results are committed, so `serve` works str
 - **Advertiser:** four questions, Publish, then the campaign plays out in 20 seconds and a results
   report shows what you got and what we protected you from. Try "too few views" or "a fraud wave".
 - **Creator:** pick a creator, join a campaign, see your goals, watch your post climb them, get paid.
-- **Compare:** set up the same campaign our way (four fields) and the old way (a rung table), then see
-  both run on every matching past campaign, zoomed into the old way's worst.
-- **Backtest:** eight measures across the generated history, with the recipe that generates it.
-  Change it and rebuild.
+- **Compare:** a budget, a fair CPI, and the old way's own rung table (random by default, editable),
+  then both run through 300 simulated markets and a scorecard rates each on budget adherence, creator
+  retention, tier fairness and brand ROI.
+- **Benchmark:** hundreds of simulated campaigns, old ladder vs Clearing, not the generated world —
+  its own synthetic market, so it can't be skewed by (or skew) anything else in the app. Replaces the
+  old Backtest page; `python -m ladder backtest` (eight measures over the generated history) is still
+  a separate CLI command, unaffected.
 - **Method:** the docs.
 
 ## Layout
@@ -45,6 +48,7 @@ No packages to install. The data and results are committed, so `serve` works str
 | `ladder/store.py` | running summary of settled campaigns (what the engine reads) |
 | `ladder/history.py` | replays history in date order, no look-ahead |
 | `ladder/simulate.py` | new campaigns for the advertiser and creator flows |
-| `ladder/compare.py`, `backtest.py`, `validate.py`, `report.py` | the pages' analyses and reports |
+| `ladder/backtest.py`, `validate.py`, `report.py` | the pages' analyses and reports, against the generated world |
+| `ladder/benchmark.py` | Benchmark and Compare: a synthetic market, not the generated world, so a change to it can't affect the other pages |
 | `ladder/server.py`, `web/` | the web app (standard-library server, plain JS) |
 | `archive/` | earlier designs, kept for reference |

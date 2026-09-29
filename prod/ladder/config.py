@@ -5,7 +5,7 @@ behave, how generous old ladders were) is not here: it is drawn at random by `wo
 recipe, so no market "fact" is hand-set.
 """
 
-NAME = "Creator Coin"
+NAME = "Clearing"
 
 # --- Policy choices ------------------------------------------------------------------------------
 
