@@ -19,7 +19,6 @@
         <a href="#advertiser" data-view="advertiser">Advertiser</a>
         <a href="#creator" data-view="creator">Creator</a>
         <a href="#compare" data-view="compare">Compare</a>
-        <a href="#backtest" data-view="backtest">Backtest</a>
         <a href="benchmark.html">Benchmark v0</a>
       </nav>
       <a class="cta" href="#advertiser">Start a campaign</a>
@@ -28,7 +27,6 @@
       <a href="#advertiser" data-view="advertiser">Advertiser</a>
       <a href="#creator" data-view="creator">Creator</a>
       <a href="#compare" data-view="compare">Compare</a>
-      <a href="#backtest" data-view="backtest">Backtest</a>
       <a href="benchmark.html">Benchmark v0</a>
     </nav>
   </header>
@@ -38,6 +36,7 @@
     <section id="view-home" class="view">
 
       <div class="hero">
+        <canvas class="hero-bg" aria-hidden="true"></canvas>
         <span class="label gold">Clearing</span>
         <h1 class="display">Price every view.<br><em>Let the market find it.</em></h1>
         <p class="lede">Give us a budget and a rough price per impression. We discover the true price, continuously, so a reward can never be mispriced.</p>
@@ -139,7 +138,6 @@
             <div class="rv"><b>03</b><h3>Pegged liquid commodity</h3><p>A second commodity, pegged to your rough CPI, stays liquid against the pool. It anchors the price while supply is thin.</p></div>
             <div class="rv"><b>04</b><h3>Continuous clearing</h3><p>The price is recomputed as supply changes, and settles when the campaign ends.</p></div>
           </div>
-          <p class="muted honest">This is hard to build. The price moves with every impression, the peg has to hold while supply expands, and settlement has to reconcile exactly.</p>
         </div>
       </section>
 
@@ -213,9 +211,9 @@
       <section class="band final reveal">
         <span class="label gold">That's the whole setup</span>
         <h2 class="display">Two numbers.<br><em>Then the market.</em></h2>
-        <div class="hero-actions"><a class="cta gold" href="#advertiser">Start a campaign</a><a class="cta ghost" href="#backtest">See how it's tested</a></div>
+        <div class="hero-actions"><a class="cta gold" href="#advertiser">Start a campaign</a><a class="cta ghost" href="benchmark.html">See how it's tested</a></div>
       </section>
-      <footer class="foot"><span>Clearing · a proposal for Meme'd</span><span><a href="#backtest">See the testing.</a></span></footer>
+      <footer class="foot"><span>Clearing · a proposal for Meme'd</span><span><a href="benchmark.html">See the testing.</a></span></footer>
     </section>
 
     <!-- ADVERTISER ------------------------------------------------------------------------------>
@@ -227,18 +225,6 @@
     <!-- COMPARE --------------------------------------------------------------------------------->
     <section id="view-compare" class="view" hidden><div id="cmp"></div></section>
 
-    <!-- BACKTEST -------------------------------------------------------------------------------->
-    <section id="view-backtest" class="view" hidden>
-      <div class="page-head">
-        <span class="label">Backtest</span>
-        <h1 class="h2">Every past campaign, paid both ways.</h1>
-        <p class="lede">The history is generated at run time by Markov chains. You control the recipe; nothing about the market is typed in. Change it and watch the results hold, or not.</p>
-      </div>
-      <div class="bt-grid">
-        <aside class="panel recipe" id="recipe"></aside>
-        <div id="bt-out"><div class="loading">Building the world…</div></div>
-      </div>
-    </section>
 
     <!-- METHOD ---------------------------------------------------------------------------------->
     <!-- Hidden for now: not linked, and #method routes home. -->

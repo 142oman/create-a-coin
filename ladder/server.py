@@ -1,19 +1,18 @@
-"""Web app: the landing page, the advertiser and creator flows, Compare and Backtest over a small JSON
-API. Standard library only. The world lives in memory; changing the recipe regenerates it for
-everyone using this server."""
+"""Web app: the landing page, the advertiser and creator flows, and Compare, over a small JSON API.
+Standard library only. Benchmark v0 (web/benchmark.html) is served as a static page; its API routes
+below are self-contained and never touch this module's World/State. Backtest, the page that used to
+live here, is gone — replaced by Benchmark v0; its CLI (`python -m ladder backtest`) is unaffected."""
 import json
 import threading
-import time
 from dataclasses import asdict
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from . import backtest, benchmark, data, simulate, validate
+from . import benchmark, data, simulate
 from .config import ALL_FORMATS, CATEGORIES, FORMATS, NAME, PLATFORM_OF, REVIEW_DAYS, TIERS
 from .history import replay
-from .world import Recipe, generate
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
@@ -26,9 +25,6 @@ class State:
     lock = threading.Lock()
     world = None
     summary = None
-    backtest = None
-    validation = None
-    built_in = 0.0
 
     @classmethod
     def ready(cls):
@@ -39,12 +35,8 @@ class State:
 
     @classmethod
     def set_world(cls, world):
-        t = time.perf_counter()
         cls.world = world
         _, _, cls.summary = replay(world)
-        cls.backtest = backtest.run(world)
-        cls.validation = validate.run(world)
-        cls.built_in = time.perf_counter() - t
 
 
 def meta():
@@ -88,11 +80,6 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             if url.path == "/api/meta":
                 return self._json(meta())
-            if url.path == "/api/backtest":
-                s = State.ready()
-                return self._json({"backtest": s.backtest, "validation": s.validation, "seconds": s.built_in,
-                                   "recipe": asdict(s.world.recipe), "params": s.world.params,
-                                   "counts": meta()["counts"]})
             if url.path == "/api/benchmark":   # Benchmark v0: self-contained, reads nothing from the world
                 return self._json(benchmark.run(int(q.get("seed", 1)), int(q.get("n", 400)), q.get("scenario", "all")))
             if url.path == "/api/benchmark/start":
@@ -123,11 +110,6 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             body = self._body()
             s = State.ready()
-            if path == "/api/world":
-                recipe = Recipe.randomised(int(body["seed"])) if body.get("randomise") else Recipe.from_dict(body)
-                with State.lock:
-                    State.set_world(generate(recipe))
-                return self.do_GET_backtest()
             if path == "/api/publish":
                 return self._json(simulate.simulate(s.world, s.summary, body.get("categories"), body.get("formats"),
                                                     body["budget"], body["days"], body.get("seed"),
@@ -142,11 +124,6 @@ class Handler(SimpleHTTPRequestHandler):
         except (KeyError, ValueError, TypeError) as e:
             return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
         return self._json({"error": "not found"}, HTTPStatus.NOT_FOUND)
-
-    def do_GET_backtest(self):
-        s = State.ready()
-        return self._json({"backtest": s.backtest, "validation": s.validation, "seconds": s.built_in,
-                           "recipe": asdict(s.world.recipe), "params": s.world.params, "counts": meta()["counts"]})
 
 
 def _plain(x):

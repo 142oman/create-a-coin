@@ -1,6 +1,162 @@
 /* Clearing front end. Plain JS, no build step. */
 "use strict";
 
+/* Hero background: WebGL ribbon field (ported from ThreeUI's MIT-licensed ribbon-field renderer). */
+function initHeroBg() {
+  const canvas = $(".hero-bg");
+  const host = canvas && canvas.closest(".hero");
+  if (!canvas || !host) return;
+  const gl = canvas.getContext("webgl", { alpha: true, antialias: false, premultipliedAlpha: false });
+  if (!gl) return;
+
+  const vertexSrc = `
+    attribute vec2 position;
+    void main() {
+      gl_Position = vec4(position, 0.0, 1.0);
+    }
+  `;
+  const fragmentSrc = `
+    precision highp float;
+    uniform vec2 resolution;
+    uniform float time;
+    uniform vec2 pointer;
+
+    float hash(vec2 p) {
+      p = fract(p * vec2(123.34, 456.21));
+      p += dot(p, p + 45.32);
+      return fract(p.x * p.y);
+    }
+
+    float ribbon(vec2 uv, float offset, float width, float phase) {
+      float y = 0.55 + 0.20 * sin((uv.x * 2.15) + phase) + 0.045 * sin((uv.x * 7.0) - phase * 0.7);
+      float d = abs(uv.y - y - offset);
+      return exp(-(d * d) / width);
+    }
+
+    void main() {
+      vec2 uv = gl_FragCoord.xy / resolution.xy;
+      vec2 p = uv;
+      p.x *= resolution.x / resolution.y;
+
+      float t = time * 0.22;
+      float drift = (pointer.x - 0.5) * 0.06;
+
+      float rightFade = smoothstep(0.28, 0.72, uv.x);
+      float centerDark = 1.0 - smoothstep(0.0, 0.88, distance(uv, vec2(0.18, 0.48)));
+
+      float r1 = ribbon(vec2(uv.x + drift, uv.y), 0.03, 0.0065, t + 0.9);
+      float r2 = ribbon(vec2(uv.x - drift * 0.7, uv.y), -0.23, 0.0085, t + 3.25);
+      float r3 = ribbon(vec2(uv.x + drift * 0.4, uv.y), 0.25, 0.014, t + 1.85);
+
+      float glow = r1 * 1.14 + r2 * 1.05 + r3 * 0.48;
+
+      vec3 teal = vec3(0.17, 0.83, 0.75);
+      vec3 cyan = vec3(0.22, 0.82, 0.96);
+      vec3 indigo = vec3(0.39, 0.38, 0.92);
+      vec3 purple = vec3(0.66, 0.33, 0.98);
+      vec3 blue = vec3(0.23, 0.51, 0.96);
+
+      vec3 col = vec3(0.0);
+      col += cyan * r1 * 0.92;
+      col += teal * r1 * 0.62;
+      col += indigo * r3 * 0.42;
+      col += blue * r2 * 0.66;
+      col += purple * (r2 + r3) * 0.30;
+
+      float bloom = exp(-pow(distance(uv, vec2(0.76, 0.40 + 0.035 * sin(t))), 2.0) / 0.050);
+      bloom += exp(-pow(distance(uv, vec2(0.71, 0.75 + 0.025 * cos(t))), 2.0) / 0.030);
+      col += vec3(0.42, 0.85, 1.0) * bloom * 0.34;
+
+      vec2 grid = fract(gl_FragCoord.xy / 7.0) - 0.5;
+      float dotShape = smoothstep(0.29, 0.11, length(grid));
+      float noise = hash(floor(gl_FragCoord.xy / 7.0));
+      float scan = 0.72 + 0.28 * sin((uv.x + uv.y) * 38.0 + time * 1.3);
+      float dots = dotShape * (0.48 + 0.52 * noise) * scan;
+
+      float micro = hash(gl_FragCoord.xy + time) * 0.035;
+      float alpha = clamp((glow * 1.55 + bloom * 0.50) * dots * rightFade, 0.0, 1.0);
+      alpha *= 1.0 - centerDark * 0.56;
+
+      vec3 base = vec3(0.005, 0.005, 0.005);
+      vec3 finalColor = mix(base, col, clamp(alpha * 1.55, 0.0, 1.0));
+      finalColor += micro * rightFade;
+
+      gl_FragColor = vec4(finalColor, 1.0);
+    }
+  `;
+
+  function compile(type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader) || "shader compile failed");
+    return shader;
+  }
+
+  const vertex = compile(gl.VERTEX_SHADER, vertexSrc);
+  const fragment = compile(gl.FRAGMENT_SHADER, fragmentSrc);
+  const program = gl.createProgram();
+  gl.attachShader(program, vertex);
+  gl.attachShader(program, fragment);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) || "program link failed");
+  gl.useProgram(program);
+
+  const buffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), gl.STATIC_DRAW);
+  const position = gl.getAttribLocation(program, "position");
+  gl.enableVertexAttribArray(position);
+  gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+
+  const resolutionLoc = gl.getUniformLocation(program, "resolution");
+  const timeLoc = gl.getUniformLocation(program, "time");
+  const pointerLoc = gl.getUniformLocation(program, "pointer");
+
+  let mouseX = 0.72, mouseY = 0.42, targetX = 0.72, targetY = 0.42;
+  let frame = 0, visible = true;
+  const smoothing = 0.035, speed = 1;
+  const startedAt = performance.now();
+
+  const onPointerMove = (e) => {
+    const bounds = host.getBoundingClientRect();
+    targetX = (e.clientX - bounds.left) / Math.max(bounds.width, 1);
+    targetY = 1 - (e.clientY - bounds.top) / Math.max(bounds.height, 1);
+  };
+
+  const resize = () => {
+    const bounds = host.getBoundingClientRect();
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.floor(bounds.width * ratio));
+    canvas.height = Math.max(1, Math.floor(bounds.height * ratio));
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.uniform2f(resolutionLoc, canvas.width, canvas.height);
+  };
+
+  const render = (now) => {
+    mouseX += (targetX - mouseX) * smoothing;
+    mouseY += (targetY - mouseY) * smoothing;
+    gl.uniform1f(timeLoc, (now - startedAt) * 0.001 * speed);
+    gl.uniform2f(pointerLoc, mouseX, mouseY);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    frame = visible && !document.hidden ? requestAnimationFrame(render) : 0;
+  };
+
+  const resizeObserver = new ResizeObserver(resize);
+  const intersectionObserver = new IntersectionObserver(([entry]) => {
+    visible = entry ? entry.isIntersecting : true;
+    if (visible && !frame) frame = requestAnimationFrame(render);
+    if (!visible && frame) { cancelAnimationFrame(frame); frame = 0; }
+  });
+  resizeObserver.observe(host);
+  intersectionObserver.observe(host);
+  host.addEventListener("pointermove", onPointerMove, { passive: true });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && visible && !frame) frame = requestAnimationFrame(render); });
+
+  resize();
+  frame = requestAnimationFrame(render);
+}
+
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
@@ -48,49 +204,20 @@ function tween(el, to, fmt, ms = 900) {
 
 let META = null;
 const meta = async () => META || (META = await api("/api/meta"));
-let BT = null;
-const bt = async (fresh) => (!fresh && BT) || (BT = await api("/api/backtest"));
 
 /* Routing ----------------------------------------------------------------------------------------- */
-const VIEWS = ["home", "advertiser", "creator", "compare", "backtest"];   // "method" hidden for now
+const VIEWS = ["home", "advertiser", "creator", "compare"];   // "method" hidden for now; Backtest replaced by Benchmark v0 (benchmark.html)
 const inits = {};
 function route() {
   const name = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "home";
   $$(".view").forEach((v) => (v.hidden = v.id !== "view-" + name));
   $$("[data-view]").forEach((a) => a.classList.toggle("active", a.dataset.view === name));
-  if (!inits[name]) { inits[name] = true; ({ home: initHome, advertiser: initAdvertiser, creator: initCreator, compare: initCompare, backtest: initBacktest, method: initMethod })[name](); }
+  if (!inits[name]) { inits[name] = true; ({ home: initHome, advertiser: initAdvertiser, creator: initCreator, compare: initCompare, method: initMethod })[name](); }
   window.scrollTo({ top: 0 });
 }
 window.addEventListener("hashchange", route);
 
 /* Charts ------------------------------------------------------------------------------------------ */
-function stripChart(rows, key) {
-  const W = 760, H = 150, L = 110, R = 20;
-  const vals = rows.flatMap((r) => [r.old.paid / r.old.budget, r.ours.paid / r.ours.budget]).filter((x) => x > 0);
-  const lo = Math.max(0.01, Math.min(...vals, 0.1) * 0.8), hi = Math.max(...vals, 1.2) * 1.2;
-  const X = (v) => L + ((Math.log(Math.max(v, lo)) - Math.log(lo)) / (Math.log(hi) - Math.log(lo))) * (W - L - R);
-  const row = (y, cls, get) => rows.map((r, i) => `<circle class="${cls}" cx="${X(get(r))}" cy="${y}" r="${i === key ? 8 : 5}" opacity="${i === key ? 1 : 0.75}" style="animation:rise .5s ${i * 25}ms both"/>`).join("");
-  const ticks = [0.1, 0.25, 0.5, 1, 2, 5, 10, 25, 50].filter((t) => t >= lo && t <= hi);
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Spend as a share of budget, every campaign">
-    <text class="lab" x="0" y="44">The old way</text><text class="lab" x="0" y="104">Clearing</text>
-    <line class="budget" x1="${X(1)}" x2="${X(1)}" y1="14" y2="${H - 22}"/>
-    <text class="axis" x="${X(1)}" y="10" text-anchor="middle">budget</text>
-    ${row(40, "dot-old", (r) => r.old.paid / r.old.budget)}
-    ${row(100, "dot-new", (r) => r.ours.paid / r.ours.budget)}
-    ${ticks.map((t) => `<text class="axis" x="${X(t)}" y="${H - 4}" text-anchor="middle">${t >= 1 ? t + "×" : pct(t)}</text>`).join("")}
-  </svg>`;
-}
-
-function pairBars(items, fmt, higherIsBetter = true) {
-  const max = Math.max(1e-9, ...items.flatMap((i) => [i.old || 0, i.new || 0]));
-  return `<div style="display:grid;gap:10px">${items.map((i) => `
-    <div style="display:grid;grid-template-columns:70px 1fr;gap:10px;align-items:center">
-      <span class="label">${esc(i.label)}</span>
-      <div style="display:grid;gap:4px">
-        <div style="display:flex;align-items:center;gap:8px"><span style="height:10px;border-radius:5px;background:var(--old);width:${((i.old || 0) / max) * 80}%;min-width:2px"></span><span class="num muted" style="font-size:12px">${fmt(i.old)}</span></div>
-        <div style="display:flex;align-items:center;gap:8px"><span style="height:10px;border-radius:5px;background:var(--gold);width:${((i.new || 0) / max) * 80}%;min-width:2px"></span><span class="num" style="font-size:12px">${fmt(i.new)}</span></div>
-      </div></div>`).join("")}</div>`;
-}
 const oldNewLegend = `<div class="legend"><span><i style="background:var(--old)"></i>The old way</span><span><i style="background:var(--gold)"></i>Clearing</span></div>`;
 
 /* HOME -------------------------------------------------------------------------------------------- */
@@ -104,6 +231,7 @@ async function initHome() {
   on(".rv", "in", { threshold: 0.25 });
   on(".beat", "on", { rootMargin: "0px 0px -30% 0px", threshold: 0.4 });
   initHeroViz();
+  initHeroBg();
   initRungs();
 }
 
@@ -826,7 +954,7 @@ function payday() {
   const fair = me.events.some((e) => e.kind === "fair_reach");
   const lines = me.posts.map((p, i) => {
     const k = p.rung_index;
-    return `<div class="goal ${k ? "hit" : ""}"><span class="n">${i + 1}</span><div><b>${vw(p.views)} views</b><br><span>${p.fraud ? "Bought views were found. Not paid." : k ? `Reached rung ${k} (${vw(p.rungs[k - 1])} views)` : "Didn't reach the first rung"}</span></div><b class="num">${inr(p.paid)}</b></div>`;
+    return `<div class="goal ${k ? "hit" : ""}"><span class="n">${i + 1}</span><div><span class="label">Post ${i + 1}</span><br><b>${vw(p.views)} views</b><br><span>${p.fraud ? "Bought views were found. Not paid." : k ? `Reached rung ${k} (${vw(p.rungs[k - 1])} views)` : "Didn't reach the first rung"}</span></div><b class="num">${inr(p.paid)}</b></div>`;
   }).join("");
   // Multiple posts can each land on a different rung of the same ladder, so the carousel can't highlight
   // a single "reached" rung for the whole campaign — it just shows what each rung was worth.
@@ -840,7 +968,7 @@ function payday() {
   root.replaceChildren(node);
   tween($("[data-paid]", node), me.paid, inr, 1400);
   wireCarousel(node);
-  $("[data-again]", node).onclick = () => pickProfile(cre.profile);
+  $("[data-again]", node).onclick = () => { cre.seed = rnd() % 1000; pickProfile(cre.profile); };
   $("[data-other]", node).onclick = () => { cre.seed = rnd() % 1000; drawProfiles(); };
 }
 
@@ -1105,80 +1233,11 @@ async function runCompare(node) {
   }
 }
 
-/* BACKTEST --------------------------------------------------------------------------------------- */
-const SLIDERS = [
-  ["virality", "Virality", "How easily posts break out, and how long viral lasts"],
-  ["cheating", "Cheating", "How easily creators drift into buying views"],
-  ["seasons", "Seasons", "How often and how long cold months last"],
-  ["pay_pull", "Pay pull", "How strongly a higher coin value attracts creators"],
-];
-
-async function initBacktest() {
-  try { renderBacktest(await bt()); } catch (e) { $("#bt-out").innerHTML = `<div class="error">${esc(e.message)}</div>`; }
-}
-
-function renderRecipe(data) {
-  const r = data.recipe, c = data.counts;
-  const el = $("#recipe");
-  el.innerHTML = `<span class="label gold">Recipe</span>
-    <div class="field"><span class="label">Seed</span><div style="display:flex;gap:8px"><input type="number" data-k="seed" value="${r.seed}"><button class="cta ghost" data-newseed style="padding:8px 12px">New</button></div></div>
-    <div class="field"><span class="label">Past budgets (₹)</span><div class="rowf"><input type="number" data-k="budget_min" value="${r.budget_min}"><input type="number" data-k="budget_max" value="${r.budget_max}"></div></div>
-    <div class="field"><span class="label">Past durations (days)</span><div class="rowf"><input type="number" data-k="duration_min" value="${r.duration_min}"><input type="number" data-k="duration_max" value="${r.duration_max}"></div></div>
-    ${SLIDERS.map(([k, l, d]) => `<label class="slider"><div class="top"><span>${l}</span><span data-sv="${k}">${(+r[k]).toFixed(2)}</span></div><input type="range" min="0" max="1" step="0.01" data-k="${k}" value="${r[k]}"><small>${d}</small></label>`).join("")}
-    <button class="cta gold" data-apply>Rebuild the world</button>
-    <button class="cta ghost" data-random>Randomise everything</button>
-    <p class="muted" style="margin:0;font-size:13px">${c.campaigns} campaigns · ${c.creators} creators · ${c.posts.toLocaleString("en-IN")} posts · built in ${data.seconds.toFixed(1)}s</p>
-    <details><summary class="label" style="cursor:pointer">Show all numbers</summary><div class="numbers">${esc(JSON.stringify(roundDeep(data.params), null, 1))}</div></details>`;
-  $$("input[type=range]", el).forEach((i) => (i.oninput = () => ($(`[data-sv="${i.dataset.k}"]`, el).textContent = (+i.value).toFixed(2))));
-  const recipe = () => Object.fromEntries($$("[data-k]", el).map((i) => [i.dataset.k, +i.value]));
-  const rebuild = async (body) => {
-    $("#bt-out").innerHTML = `<div class="loading">Regenerating the world and replaying every campaign…</div>`;
-    try { BT = await api("/api/world", body); META = null; renderBacktest(BT); } catch (e) { $("#bt-out").innerHTML = `<div class="error">${esc(e.message)}</div>`; }
-  };
-  $("[data-apply]", el).onclick = () => rebuild(recipe());
-  $("[data-newseed]", el).onclick = () => { $("[data-k=seed]", el).value = rnd() % 10000; };
-  $("[data-random]", el).onclick = () => rebuild({ randomise: true, seed: rnd() % 10000 });
-}
-
-function roundDeep(x) {
-  if (Array.isArray(x)) return x.map(roundDeep);
-  if (x && typeof x === "object") return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, roundDeep(v)]));
-  return typeof x === "number" ? Math.round(x * 1000) / 1000 : x;
-}
-
+/* Shared by the Compare page (moved here since the old Backtest page, its original home, is gone). */
 function measure(title, oldV, newV, note, extra = "") {
   return `<div class="panel measure"><span class="label">${title}</span>
     <div class="pair"><div><span class="label old-t">Old way</span><b class="old-t">${oldV}</b></div><div><span class="label gold-t">Clearing</span><b class="gold-t">${newV}</b></div></div>
     ${extra}<p>${note}</p></div>`;
-}
-
-function renderBacktest(data) {
-  renderRecipe(data);
-  const b = data.backtest, v = data.validation, n = b.campaigns;
-  const tiers = ["nano", "micro", "mid", "macro"];
-  const tierBars = pairBars(tiers.map((t) => ({ label: t, old: b.creators_paid_by_tier.old[t].rate, new: b.creators_paid_by_tier.new[t].rate })), (x) => pct(x));
-  const stripRows = b.budget.old_ratios.map((x, i) => ({ old: { paid: x, budget: 1 }, ours: { paid: b.budget.new_ratios[i], budget: 1 } }));
-  const ret = b.returned;
-  $("#bt-out").innerHTML = `<div class="measures">
-    <div class="group-title"><span class="label gold">For advertisers · across ${n} campaigns in this world</span></div>
-    ${measure("Budget kept", `${b.budget.old_over} over`, `${b.budget.new_over} over`, `Worst overspend: ${b.budget.old_worst.toFixed(1)}× the budget the old way. Clearing can't go over.`, stripChart(stripRows, -1))}
-    ${measure("Cost per 1,000 real views", cpm(b.cost_per_1k.old), cpm(b.cost_per_1k.new), "Median across campaigns: what the brand really paid for genuine reach.")}
-    ${measure("Money returned", inrShort(ret.old_unspent), inrShort(ret.new_thin + ret.new_between_rungs), `Clearing: ${inrShort(ret.new_thin)} back when views were thin, ${inrShort(ret.new_between_rungs)} for views between rungs. The old way just left budget unspent.`)}
-    ${measure("Paid for bought views", inrShort(b.bought.old), inrShort(b.bought.new), `${inrShort(b.bought.blocked)} of bought views were caught and never paid. What slipped through was dripped in to look real.`)}
-    <div class="group-title"><span class="label gold">For creators</span></div>
-    <div class="panel measure"><span class="label">Creators paid anything, by size</span>${tierBars}${oldNewLegend}<p>One gut-feel ladder is out of reach for small pages and easy for big ones. Per-size rungs fix that.</p></div>
-    <div class="panel measure"><span class="label">Fair Reach rescues</span><div class="pair"><div><span class="label">Campaigns</span><b class="gold-t">${b.fair_reach.campaigns}</b></div><div><span class="label">Creators paid only because of it</span><b class="gold-t">${b.fair_reach.creators}</b></div></div><p>When views ran cold for everyone in a campaign, rungs came down so they stayed reachable.</p></div>
-    <div class="group-title"><span class="label gold">Market health</span></div>
-    ${measure("Price stability (lower is steadier)", b.price_stability.old != null ? b.price_stability.old.toFixed(2) : "–", b.price_stability.new != null ? b.price_stability.new.toFixed(2) : "–", "How much the price per view swings between similar campaigns (coefficient of variation).")}
-    ${measure("Pay to the top 10% of creators", pct(b.concentration.old), pct(b.concentration.new), "Clearing pays for reach, and reach is concentrated: the biggest posts earn the most. The old way's flat payouts hide that big posts were underpaid.")}
-    <div class="group-title"><span class="label gold">Checks on the world and the method</span></div>
-    <div class="panel measure"><span class="label">Rungs hit what they promise</span>${pairBars(v.rungs.design.map((d, i) => ({ label: "Rung " + (i + 1), old: d, new: v.rungs.actual ? v.rungs.actual[i] : 0 })), (x) => pct(x))}
-      <div class="legend"><span><i style="background:var(--old)"></i>Designed</span><span><i style="background:var(--gold)"></i>Actual, on campaigns the rungs weren't built from</span></div></div>
-    <div class="panel measure"><span class="label">Is the world realistic?</span>
-      <div class="pair"><div><span class="label">Top 10% of posts' share of views</span><b>${pct(v.heavy_tail.top_10pct_share)}</b></div><div><span class="label">Followers vs views</span><b>${v.followers_vs_views_correlation.toFixed(2)}</b></div></div>
-      <div class="pair"><div><span class="label">Bought views caught</span><b>${pct(v.fraud.catch_rate)}</b></div><div><span class="label">Genuine posts held</span><b>${pct(v.fraud.false_alarm_rate, 1)}</b></div></div>
-      <p>Heavy tails and growth shapes come out of the chains, not out of a formula. Same posts both ways, so creator behaviour is held fixed.</p></div>
-  </div>`;
 }
 
 /* METHOD ----------------------------------------------------------------------------------------- */
