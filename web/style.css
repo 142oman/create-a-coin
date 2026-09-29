@@ -67,7 +67,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -.035em; font-weight: 600; }
 :root { --serif: "Instrument Serif", Georgia, "Times New Roman", serif; }
 .serif-em, .hero .display em, .beat em, .h2 em { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: -.01em; font-size: 1.1em; }
 
-.hero { min-height: calc(100vh - 64px); display: grid; grid-template-columns: minmax(0, 1fr); align-content: center; gap: 26px; padding: 64px 0 30px; position: relative; overflow: hidden; }
+.hero { min-height: calc(100vh - 64px); display: grid; grid-template-columns: minmax(0, 1fr); align-content: center; gap: 26px; padding: 64px 0 30px; position: relative; }
 .hero { isolation: isolate; }
 .hero::before { content: ""; position: absolute; inset: -10% -25% auto -25%; height: 90%; background: radial-gradient(50% 55% at 28% 25%, rgba(242,193,78,.14), transparent 70%); pointer-events: none; }
 .hero > * { position: relative; animation: rise .9s cubic-bezier(.2,.8,.2,1) both; }
@@ -75,7 +75,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -.035em; font-weight: 600; }
 .hero > *:nth-child(3) { animation-delay: .14s; }
 .hero > *:nth-child(4) { animation-delay: .22s; }
 .hero > *:nth-child(5) { animation-delay: .34s; }
-.hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: .85; animation: none; }
+.hero-bg { position: absolute; top: 0; bottom: 0; left: 50%; width: 100vw; margin-left: -50vw; z-index: 0; pointer-events: none; opacity: .85; animation: none; }
 .hero .display { font-size: clamp(46px, 7.6vw, 116px); line-height: .94; letter-spacing: -.045em; }
 .hero .display em { color: var(--gold); }
 .hero .lede { font-size: clamp(18px, 1.6vw, 21px); max-width: 600px; }
@@ -119,8 +119,9 @@ h1, h2, h3 { margin: 0; letter-spacing: -.035em; font-weight: 600; }
 .fig.in *, .fig.in *::before, .fig.in *::after { animation-play-state: running; }
 .fig-card { padding: 26px; border: 1px solid var(--line); border-radius: var(--r); background: linear-gradient(180deg, var(--card), var(--bg-2)); display: grid; gap: 20px; align-content: start; }
 .fig small { color: var(--muted); font-size: 14px; }
-.fig-2, .fig-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-.fig-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fig-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; }
+.fig-1 { grid-template-columns: minmax(0, 1fr); max-width: 520px; }
+.fig-div { border: 0; border-top: 1px solid var(--line); margin: 0; }
 
 .lad { display: grid; gap: 16px; }
 .lr { display: grid; grid-template-columns: 52px minmax(0, 1fr) 76px; gap: 12px; align-items: center; }
@@ -179,10 +180,8 @@ h1, h2, h3 { margin: 0; letter-spacing: -.035em; font-weight: 600; }
 .maps article { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 40px; padding: 34px 0; border-bottom: 1px solid var(--line); align-items: start; }
 .maps .was { display: flex; gap: 16px; align-items: baseline; }
 .maps .was b { font: 500 14px var(--mono); color: var(--old); }
-.maps .was span { position: relative; color: var(--muted); font-size: 18px; transition: color .6s .3s; }
-.maps .was span::after { content: ""; position: absolute; left: -3px; right: -3px; top: 54%; height: 2px; background: var(--old); transform: scaleX(0); transform-origin: left; transition: transform .7s .3s cubic-bezier(.2,.8,.2,1); }
-.maps article.in .was span { color: var(--dim); }
-.maps article.in .was span::after { transform: scaleX(1); }
+.maps .was span { color: var(--muted); font-size: 18px; text-decoration: line-through; text-decoration-color: transparent; text-decoration-thickness: 2px; transition: color .6s .3s, text-decoration-color .7s .3s; }
+.maps article.in .was span { color: var(--dim); text-decoration-color: var(--old); }
 .maps h3 { font-size: clamp(22px, 2.4vw, 32px); line-height: 1.1; margin-bottom: 10px; }
 .maps p { margin: 0; color: var(--muted); max-width: 640px; font-size: 17px; }
 
@@ -477,7 +476,7 @@ svg.chart text.lab { font: 500 11px var(--mono); fill: var(--ink-2); }
   .ch-label { position: static; display: flex; align-items: baseline; gap: 14px; }
   .ch-label b::after { display: none; }
   .ch-label b { font-size: 52px; }
-  .fig-2, .fig-3 { grid-template-columns: minmax(0, 1fr); }
+  .fig-3 { grid-template-columns: minmax(0, 1fr); }
   .plist > div { grid-template-columns: 50px minmax(0, 1fr); }
   .plist p { grid-column: 2; }
   .live-grid { grid-template-columns: minmax(0, 1fr); }
@@ -503,7 +502,7 @@ svg.chart text.lab { font: 500 11px var(--mono); fill: var(--ink-2); }
 .mobile-links { display: none; gap: 6px; overflow-x: auto; padding: 0 20px 12px; }
 .mobile-links a { text-decoration: none; color: var(--muted); font-size: 13px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; white-space: nowrap; }
 .mobile-links a.active { color: var(--ink); border-color: var(--ink-2); }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } .reveal, .rv, .beat { opacity: 1; transform: none; } .maps .was span::after { transform: scaleX(1); } .lt i, .lr em { opacity: 1; }  }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } .reveal, .rv, .beat { opacity: 1; transform: none; } .maps .was span { text-decoration-color: var(--old); } .lt i, .lr em { opacity: 1; }  }
 
 /* RESULTS ----------------------------------------------------------------------------------------- */
 .report { gap: 18px; }

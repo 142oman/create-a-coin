@@ -41,8 +41,8 @@ function initHeroBg() {
       float t = time * 0.22;
       float drift = (pointer.x - 0.5) * 0.06;
 
-      float rightFade = smoothstep(0.28, 0.72, uv.x);
-      float centerDark = 1.0 - smoothstep(0.0, 0.88, distance(uv, vec2(0.18, 0.48)));
+      float rightFade = smoothstep(0.0, 0.4, uv.x);
+      float centerDark = 1.0 - smoothstep(0.0, 0.7, distance(uv, vec2(0.18, 0.48)));
 
       float r1 = ribbon(vec2(uv.x + drift, uv.y), 0.03, 0.0065, t + 0.9);
       float r2 = ribbon(vec2(uv.x - drift * 0.7, uv.y), -0.23, 0.0085, t + 3.25);
@@ -75,7 +75,7 @@ function initHeroBg() {
 
       float micro = hash(gl_FragCoord.xy + time) * 0.035;
       float alpha = clamp((glow * 1.55 + bloom * 0.50) * dots * rightFade, 0.0, 1.0);
-      alpha *= 1.0 - centerDark * 0.56;
+      alpha *= 1.0 - centerDark * 0.4;
 
       vec3 finalColor = col + micro * rightFade;
       float outAlpha = clamp(alpha * 1.55, 0.0, 1.0);
@@ -118,13 +118,13 @@ function initHeroBg() {
   const startedAt = performance.now();
 
   const onPointerMove = (e) => {
-    const bounds = host.getBoundingClientRect();
+    const bounds = canvas.getBoundingClientRect();
     targetX = (e.clientX - bounds.left) / Math.max(bounds.width, 1);
     targetY = 1 - (e.clientY - bounds.top) / Math.max(bounds.height, 1);
   };
 
   const resize = () => {
-    const bounds = host.getBoundingClientRect();
+    const bounds = canvas.getBoundingClientRect();
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = Math.max(1, Math.floor(bounds.width * ratio));
     canvas.height = Math.max(1, Math.floor(bounds.height * ratio));
@@ -150,6 +150,7 @@ function initHeroBg() {
   resizeObserver.observe(host);
   intersectionObserver.observe(host);
   host.addEventListener("pointermove", onPointerMove, { passive: true });
+  window.addEventListener("resize", resize, { passive: true });
   document.addEventListener("visibilitychange", () => { if (!document.hidden && visible && !frame) frame = requestAnimationFrame(render); });
 
   resize();
