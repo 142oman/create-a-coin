@@ -170,7 +170,7 @@ function marketCards(d) {
       <div class="mrow"><span>Paid ÷ budget</span><b><em class="old-t">${times(v.old.total_spend / v.old.total_budget)}</em> → <em class="new-t">${times(v.new.total_spend / v.new.total_budget)}</em></b></div>
       <div class="mrow"><span>Paid ≤ true price</span><b><em class="old-t">${pct(atOrUnder(rows, "old"))}</em> → <em class="new-t">${pct(atOrUnder(rows, "new"))}</em></b></div></div>`;
   }).join("");
-  return card("Which markets break it", `Same campaigns, grouped by market${d.mode === "unbiased" ? " (named from what happened, not chosen)" : ""}. Green ring = never overspent.`,
+  return card("Which markets break it", `Same campaigns, grouped by market${d.mode === "entropy" ? " (named from what happened, not chosen)" : ""}. Green ring = never overspent.`,
     `<div class="mgrid">${cards}</div>${OLD_NEW}`,
     "A crowd or a viral surge breaks a fixed ladder — it pays per creator who crosses a rung, so more creators means more payouts, with no ceiling. Clearing has one: the budget.");
 }
@@ -278,32 +278,17 @@ function wireExplorer() {
   };
 }
 
-/* ---------- UNBIASED BANNER ---------- */
-function unbiasedBanner(d) {
-  if (d.mode !== "unbiased") return "";
-  return `<section class="unb"><h3>Unbiased mode: nothing here was hand-picked</h3>
-    <p>${d.campaigns} campaigns, each with its own random world. There are no market types, no 20% splits and no fixed price. Markets are labelled only after the fact, from what actually happened.</p>
-    <div class="two"><div><b>Drawn fresh for every campaign</b><ul>
-      <li>The true price per view: ₹5 to ₹100 per 1,000, log-uniform</li>
-      <li>Each creator size's typical views, spread and share of the crowd</li>
-      <li>How many creators turn up: lognormal around the expected crowd</li>
-      <li>How many viral surges (Poisson, average 1), which size group, how many posts, how strong</li>
-      <li>Single-post spikes (Poisson, average 2), 5× to 200×</li>
-      <li>The advertiser's skill, from perfect to careless, and his gut feel</li>
-      <li>How far Clearing's past data has drifted from today's market</li></ul></div>
-    <div><b>Still fixed, and why</b><ul>
-      <li>The four creator sizes and their rough order (from the brief)</li>
-      <li>The budget range, ₹20,000 to ₹2 crore</li>
-      <li>The rules: Clearing's rungs and price, the old ladder's payouts sized to spend the budget under the advertiser's own beliefs (this favours the old way)</li>
-      <li>Market labels use thresholds (crowd 2× or more = abundant, half or less = scarce). They only name a campaign, they never change it</li>
-      <li>"Never overspends" for Clearing is a property of splitting a fixed pool, not a simulation result</li></ul></div></div></section>`;
+/* ---------- ENTROPY BADGE ---------- */
+function entropyBadge(d) {
+  if (d.mode !== "entropy") return "";
+  return `<div class="ent" title="${d.campaigns} campaigns, each with its own random world: true price, creator sizes, crowd, viral surges, spikes and the advertiser's skill are all drawn fresh. Markets are named only afterwards, from what happened."><i aria-hidden="true"></i><b>Randomised stress test</b><span>fresh seed · every input drawn at random</span></div>`;
 }
 
 /* ---------- PAGE ---------- */
 function render(d) {
   DATA = d; EX.market = "all"; EX.outcome = "all"; EX.sort = "multiple"; EX.shown = 12;
   const out = $("#bm-out");
-  out.innerHTML = unbiasedBanner(d) + hero(d) +
+  out.innerHTML = entropyBadge(d) + hero(d) +
     section("See it", "Every campaign, at a glance", "", `${waffleCard(d)}<div class="bm-grid">${scatter(d)}${severity(d)}</div>`) +
     section("Why it happens", "What breaks a fixed ladder", "", `${marketCards(d)}<div class="bm-grid">${heatmap(d)}${leaderboard(d)}</div>`) +
     section("Who gets paid", "Fairness to creators", "", creators(d)) + trust(d) + scorecard(d) + explorer(d);
@@ -321,16 +306,20 @@ function setLoader(show, done = 0, total = 1, stage = "Starting") {
   $("#bm-count").textContent = total > 1 ? `${done.toLocaleString("en-IN")} of ${total.toLocaleString("en-IN")} simulated campaigns` : "Warming up…";
 }
 
-let RUN = 0, UNB = false;
+let RUN = 0, ENT = false;
 async function go() {
   const me = ++RUN;
   $("#bm-out").innerHTML = "";
   setLoader(true);
   const q = new URLSearchParams({ seed: $("#bm-seed").value || 1, n: $("#bm-n").value || 400, scenario: $("#bm-scn").value });
-  if (UNB) q.set("mode", "unbiased");
+  if (ENT) q.set("mode", "entropy");
   try {
-    const s = await fetch("/api/benchmark/start?" + q);
-    if (!s.ok) throw new Error("This server doesn't have the benchmark route yet. Restart it with: python -m ladder serve");
+    const s = await (window.Loader ? Loader.fetch("/api/benchmark/start?" + q, {}, "Starting the benchmark") : fetch("/api/benchmark/start?" + q));
+    if (!s.ok) {
+      let msg = "";
+      try { msg = (await s.json()).error; } catch (_) { /* not JSON: an old server without this route */ }
+      throw new Error(msg || "This server doesn't have the benchmark route yet. Restart it with: python -m ladder serve");
+    }
     const { id } = await s.json();
     for (;;) {
       await new Promise((r) => setTimeout(r, 250));
@@ -349,11 +338,11 @@ async function go() {
 const LABELS = { all: "All five markets, mixed", smooth: "Everything moves smoothly", abundant: "Abundant: a crowd floods in", scarce: "Scarce: too few people arrive", viral_one: "One viral surge", viral_many: "Many viral surges" };
 $("#bm-scn").innerHTML = Object.entries(LABELS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
 $("#bm-form").onsubmit = (e) => { e.preventDefault(); go(); };
-$("#bm-unb").onclick = () => {
-  UNB = !UNB;
-  $("#bm-unb").setAttribute("aria-pressed", UNB);
-  $("#bm-scn").disabled = UNB;
-  if (UNB) $("#bm-seed").value = 1 + Math.floor(Math.random() * 999999);   // a fresh seed, so no run is a favourite
+$("#bm-ent").onclick = () => {
+  ENT = !ENT;
+  $("#bm-ent").setAttribute("aria-pressed", ENT);
+  $("#bm-scn").disabled = ENT;
+  if (ENT) $("#bm-seed").value = 1 + Math.floor(Math.random() * 999999);   // a fresh seed, so no run is a favourite
   go();
 };
 $("#bm-rand").onclick = () => { $("#bm-seed").value = 1 + Math.floor(Math.random() * 999999); go(); };

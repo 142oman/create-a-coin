@@ -1,0 +1,31 @@
+/* Loader: a full-screen warp field shown while the page boots and while a request is slow. */
+#ld {
+  position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: var(--bg);
+  opacity: 0; visibility: hidden; transition: opacity .4s ease, visibility 0s linear .4s; user-select: none; -webkit-user-select: none;
+}
+#ld.on { opacity: 1; visibility: visible; transition: opacity .18s ease; }
+#ld canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* ThreeUI's hyperspace is ice-blue; a hue turn takes it to the site's gold */
+#ld .ld-gl { filter: hue-rotate(185deg) saturate(1.05); }
+#ld canvas[hidden] { display: none; }
+/* The status text is for screen readers only; the effect itself is the loading screen. */
+.ld-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* One hairline along the bottom edge: a gold segment sweeping across while we wait, a real fill when there is progress. */
+.ld-line { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; overflow: hidden; background: rgba(243, 242, 238, .08); }
+.ld-line i { display: block; height: 100%; width: 32%; background: linear-gradient(90deg, rgba(242, 193, 78, 0), var(--gold) 55%, rgba(242, 193, 78, 0)); animation: ld-sweep 1.5s cubic-bezier(.45, 0, .25, 1) infinite; }
+.ld-line.det i { width: 0; background: var(--gold); animation: none; transition: width .25s ease; }
+@keyframes ld-sweep { from { transform: translateX(-100%); } to { transform: translateX(320%); } }
+@media (prefers-reduced-motion: reduce) {
+  .ld-line i { animation: none; width: 100%; opacity: .5; }
+  .ld-line.det i { opacity: 1; }
+  #ld { transition: none; }
+}
+
+/* In-page loading blocks (the "Finding creators…" style text) get a small spinner. */
+.loading { display: flex; align-items: center; gap: 12px; }
+.loading::before {
+  content: ""; width: 16px; height: 16px; border-radius: 50%; flex: none;
+  border: 2px solid var(--line-2); border-top-color: var(--gold); animation: ld-spin .8s linear infinite;
+}
+@keyframes ld-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .loading::before { animation: none; border-top-color: var(--gold); } }

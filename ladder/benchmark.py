@@ -21,6 +21,7 @@ One campaign, in order:
 """
 import math
 import random
+from datetime import date, timedelta
 import statistics
 
 from . import engine
@@ -73,9 +74,9 @@ def _poisson(rng, lam):
         k += 1
 
 
-# Unbiased mode: nothing is a hand-set scenario. Each of these is drawn fresh for every campaign from a wide
+# Entropy mode: nothing is a hand-set scenario. Each of these is drawn fresh for every campaign from a wide
 # distribution, listed here so no choice is hidden.
-UNBIASED_CPI = (0.005, 0.1)           # true price, rupees per view (₹5 to ₹100 per 1,000), log-uniform
+ENTROPY_CPI = (0.005, 0.1)           # true price, rupees per view (₹5 to ₹100 per 1,000), log-uniform
 
 
 def _draw_world(rng):
@@ -159,21 +160,26 @@ def _fair_reach(posts, rungs):
     return out or rungs, factor
 
 
-def one_campaign(rng, scenario, skill=None, unbiased=False):
-    if unbiased:
-        cpi = math.exp(rng.uniform(math.log(UNBIASED_CPI[0]), math.log(UNBIASED_CPI[1])))
+def one_campaign(rng, scenario, skill=None, entropy=False, budget=None, expected_cpi=None, trace=False, twist=None):
+    """budget / expected_cpi (rupees, rupees per view) pin the advertiser's own numbers, for the Advertiser page.
+    The random draws still happen, so every other draw is the same as without them."""
+    if entropy:
+        cpi = math.exp(rng.uniform(math.log(ENTROPY_CPI[0]), math.log(ENTROPY_CPI[1])))
         world = _draw_world(rng)
         skill = rng.uniform(0, 2) if skill is None else skill
     else:
         cpi, world = TRUE_CPI, TIERS
         skill = 1.0 if skill is None else skill
-    mean_views = MEAN_VIEWS if not unbiased else _mean_views(world)
-    budget = math.exp(rng.uniform(math.log(BUDGET_RANGE[0]), math.log(BUDGET_RANGE[1])))
+    mean_views = MEAN_VIEWS if not entropy else _mean_views(world)
+    drawn_budget = math.exp(rng.uniform(math.log(BUDGET_RANGE[0]), math.log(BUDGET_RANGE[1])))
     feel = _clip(rng.lognormvariate(math.log(100), 0.8 * skill), *FEEL_RANGE)
-    feel_cpi = cpi * 100 / feel
+    budget = drawn_budget if budget is None else float(budget)
+    if expected_cpi is not None:
+        feel = _clip(cpi * 100 / expected_cpi, *FEEL_RANGE)
+    feel_cpi = cpi * 100 / feel if expected_cpi is None else expected_cpi
 
     # --- the advertiser's ladder, by gut: one for everyone ---
-    optimal = [engine.round_sig(_pooled_reach(lv) if not unbiased else _pooled_reach_for(lv, world)) for lv in engine.LEVELS]
+    optimal = [engine.round_sig(_pooled_reach(lv) if not entropy else _pooled_reach_for(lv, world)) for lv in engine.LEVELS]
     bias, tilt = rng.lognormvariate(0, 0.5 * skill), rng.gauss(0, 0.4 * skill)
     last = len(optimal) - 1
     scores = [_clip(feel * bias * math.exp(tilt * (2 * k / last - 1)) * rng.lognormvariate(0, 0.15 * skill), *RUNG_SCORE_RANGE)
@@ -189,7 +195,7 @@ def one_campaign(rng, scenario, skill=None, unbiased=False):
 
     # --- the market ---
     true_posts = max(1.0, budget / cpi / mean_views)
-    if unbiased:
+    if entropy:
         crowd_mult = rng.lognormvariate(0, 0.9)
         surges = [(rng.choice(TIER_NAMES), rng.uniform(0.1, 0.9), math.exp(rng.uniform(math.log(2), math.log(20))))
                   for _ in range(_poisson(rng, 1.0))]
@@ -207,13 +213,34 @@ def one_campaign(rng, scenario, skill=None, unbiased=False):
                 views[i] = int(views[i] * mult)
     for i in rng.sample(range(n), min(spikes, n)):
         views[i] = int(views[i] * math.exp(rng.uniform(math.log(spike_range[0]), math.log(spike_range[1]))))
-    total_views = sum(views)
-    by_tier = {t: [v for v, tt in zip(views, tiers) if tt == t] for t in TIER_NAMES}
+    # Advertiser page twists, never used by Benchmark itself. fraud: some creators buy views (the old way pays on
+    # them, Clearing's fraud check does not). late_viral: several posts explode, which only shows on the last day.
+    fraud, late = set(), {}
+    if twist == "fraud":
+        fraud = set(rng.sample(range(n), max(1, int(n * rng.uniform(0.12, 0.25)))))
+        for i in fraud:
+            views[i] = int(views[i] * rng.uniform(8, 30))
+    elif twist == "late_viral":
+        # a handful of big creators' posts explode: about 6% of posts (at least 4), taken from the largest size
+        # groups first. Each one reaches a top rung the ladder was never priced for.
+        k = min(n, max(4, round(0.06 * n)))
+        pool = []
+        for t in reversed(TIER_NAMES):
+            pool += [j for j in range(n) if tiers[j] == t]
+            if len(pool) >= k:
+                break
+        for i in rng.sample(pool, min(k, len(pool))):
+            late[i] = views[i]   # its views before it went viral
+            views[i] = int(views[i] * math.exp(rng.uniform(math.log(15), math.log(40))))
+    genuine = [i for i in range(n) if i not in fraud]
+    total_views = sum(views[i] for i in genuine)
+    by_tier = {t: [views[i] for i in genuine if tiers[i] == t] for t in TIER_NAMES}
+    all_by_tier = {t: [v for v, tt in zip(views, tiers) if tt == t] for t in TIER_NAMES} if fraud else by_tier
 
     # --- old way ---
-    old_by_tier = {t: sum(engine.ladder_pay(ladder, v) for v in vs) for t, vs in by_tier.items()}
+    old_by_tier = {t: sum(engine.ladder_pay(ladder, v) for v in vs) for t, vs in all_by_tier.items()}
     old_spend = sum(old_by_tier.values())
-    old_paid = {t: sum(1 for v in vs if v >= old_rungs[0]) for t, vs in by_tier.items()}
+    old_paid = {t: sum(1 for v in vs if v >= old_rungs[0]) for t, vs in all_by_tier.items()}
 
     # --- Creator Coin: exactly what engine.settle does for a real campaign (ladder/simulate.py) ---
     # the advertiser's raw feel-CPI goes straight in as the reference, unclipped. settle() itself is
@@ -221,8 +248,8 @@ def one_campaign(rng, scenario, skill=None, unbiased=False):
     # sets the price regardless of his number ("plenty"); pool > reference means views were thin, so
     # the price converges toward a negotiated point between the pool price and his reference ("thin").
     reference = feel_cpi
-    # unbiased: past posts have drifted from today's market (each size's typical views shifted at random)
-    past = {t: (med * math.exp(rng.gauss(0, 0.3)), sg, sh) for t, (med, sg, sh) in world.items()} if unbiased else world
+    # entropy: past posts have drifted from today's market (each size's typical views shifted at random)
+    past = {t: (med * math.exp(rng.gauss(0, 0.3)), sg, sh) for t, (med, sg, sh) in world.items()} if entropy else world
     new_rungs, factors = {}, {}
     for t in TIER_NAMES:
         base = engine.rungs_from([_draw_views(rng, t, past) for _ in range(HISTORY_PER_TIER)])
@@ -234,11 +261,13 @@ def one_campaign(rng, scenario, skill=None, unbiased=False):
         new_paid[t] = sum(1 for v in vs if v >= new_rungs[t][0])
     new_spend = sum(new_by_tier.values())
 
-    if unbiased:   # labelled only after the fact, from what actually happened
+    if entropy:   # labelled only after the fact, from what actually happened
         seen = n / true_posts
         scenario = "abundant" if seen >= 2 else "scarce" if seen <= 0.5 else "viral_many" if len(surges) >= 2 else "viral_one" if surges else "smooth"
     return {
-        "scenario": scenario, "true_cpi": cpi, "unbiased": unbiased, "budget": budget, "feel": feel, "feel_cpi": feel_cpi, "reference": reference,
+        **({"trace": [(tiers[i], views[i], i in fraud, late.get(i)) for i in range(n)]} if trace else {}),   # per post, for the Advertiser timeline
+        "fraud_posts": len(fraud), "fraud_blocked": price * sum(engine.rung_coins(views[i], new_rungs[tiers[i]]) for i in fraud),
+        "scenario": scenario, "true_cpi": cpi, "entropy": entropy, "budget": budget, "feel": feel, "feel_cpi": feel_cpi, "reference": reference,
         "rung_scores": scores, "bias": bias, "tilt": tilt, "posts": n, "views": total_views,
         "tier_posts": {t: len(vs) for t, vs in by_tier.items()},
         "surges": [{"tier": t, "share": s, "mult": m} for t, s, m in surges], "spikes": spikes,
@@ -308,29 +337,30 @@ def _side(rows, key):
     }
 
 
-def _rows(seed, campaigns, scenario, skill=None, tick=None, unbiased=False):
+def _rows(seed, campaigns, scenario, skill=None, tick=None, entropy=False):
     names = list(SCENARIOS)
     rows = []
     for i in range(campaigns):
-        rng = random.Random(f"benchmark-{seed}-{i}" if not unbiased else f"unbiased-{seed}-{i}")
-        rows.append(one_campaign(rng, scenario if scenario != "all" else names[i % len(names)], skill, unbiased))
+        # the entropy seed namespace keeps its old name on purpose: the same seed still gives the same campaigns
+        rng = random.Random(f"benchmark-{seed}-{i}" if not entropy else f"unbiased-{seed}-{i}")
+        rows.append(one_campaign(rng, scenario if scenario != "all" else names[i % len(names)], skill, entropy))
         rows[-1]["id"] = i + 1
         if tick:
             tick()
     return rows
 
 
-def run(seed=1, campaigns=400, scenario="all", tick=None, unbiased=False):
+def run(seed=1, campaigns=400, scenario="all", tick=None, entropy=False):
     if scenario != "all" and scenario not in SCENARIOS:
         raise ValueError(f"scenario must be 'all' or one of {', '.join(SCENARIOS)}")
     campaigns = int(_clip(int(campaigns), 1, 1000))
     names = list(SCENARIOS)
-    rows = _rows(seed, campaigns, scenario, None, tick, unbiased)
+    rows = _rows(seed, campaigns, scenario, None, tick, entropy)
     by_scenario = {s: {"old": _side(g, "old"), "new": _side(g, "new"), "n": len(g)}
                    for s in names if (g := [r for r in rows if r["scenario"] == s])}
     return {
         "seed": seed, "campaigns": campaigns, "scenario": scenario, "labels": SCENARIOS, "tiers": TIER_NAMES,
-        "mode": "unbiased" if unbiased else "standard", "true_cpm": statistics.median(r["true_cpi"] for r in rows) * 1000,
+        "mode": "entropy" if entropy else "standard", "true_cpm": statistics.median(r["true_cpi"] for r in rows) * 1000,
         "overpaid": OVERPAID, "overpaid_share": OVERPAID_SHARE, "levels": engine.LEVELS,
         "totals": {"old": _side(rows, "old"), "new": _side(rows, "new"),
                    "rescued_campaigns": sum(1 for r in rows if r["rescued"])},
@@ -355,7 +385,7 @@ def _gist(rows):
     return out
 
 
-def run_full(seed=1, campaigns=400, scenario="all", progress=None, unbiased=False):
+def run_full(seed=1, campaigns=400, scenario="all", progress=None, entropy=False):
     """The main run plus the confidence checks. progress(done, total, stage) is called as work finishes."""
     campaigns = int(_clip(int(campaigns), 1, 1000))
     total = campaigns + ROBUST_SEEDS * ROBUST_N + len(SKILLS) * SKILL_N
@@ -368,14 +398,14 @@ def run_full(seed=1, campaigns=400, scenario="all", progress=None, unbiased=Fals
             report(done[0], total, stage)
         return tick
 
-    result = run(seed, campaigns, scenario, ticker("Simulating campaigns"), unbiased)
+    result = run(seed, campaigns, scenario, ticker("Simulating campaigns"), entropy)
     result["robust"] = []
     for k in range(ROBUST_SEEDS):
         other = seed + 1000 * (k + 1)
-        result["robust"].append({"seed": other, **_gist(_rows(other, ROBUST_N, "all", None, ticker(f"Re-running with other seeds ({k + 1} of {ROBUST_SEEDS})"), unbiased))})
+        result["robust"].append({"seed": other, **_gist(_rows(other, ROBUST_N, "all", None, ticker(f"Re-running with other seeds ({k + 1} of {ROBUST_SEEDS})"), entropy))})
     result["skills"] = []
     for label, k in SKILLS:
-        result["skills"].append({"label": label, "skill": k, **_gist(_rows(seed + 77, SKILL_N, "all", k, ticker(f"Testing a {label.lower()} advertiser"), unbiased))})
+        result["skills"].append({"label": label, "skill": k, **_gist(_rows(seed + 77, SKILL_N, "all", k, ticker(f"Testing a {label.lower()} advertiser"), entropy))})
     report(total, total, "Done")
     return result
 
@@ -385,14 +415,21 @@ import threading
 import uuid
 
 _JOBS, _LOCK = {}, threading.Lock()
+MAX_RUNNING_JOBS = 4   # runs at once, so a small host is never swamped
 
 
-def start_job(seed=1, campaigns=400, scenario="all", unbiased=False):
+class Busy(ValueError):
+    """Too many runs in flight; the server answers 429 and the page says so."""
+
+
+def start_job(seed=1, campaigns=400, scenario="all", entropy=False):
     if scenario != "all" and scenario not in SCENARIOS:
         raise ValueError(f"scenario must be 'all' or one of {', '.join(SCENARIOS)}")
     job_id = uuid.uuid4().hex[:12]
     job = {"done": 0, "total": 1, "stage": "Starting", "result": None, "error": None}
     with _LOCK:
+        if sum(1 for j in _JOBS.values() if j["result"] is None and j["error"] is None) >= MAX_RUNNING_JOBS:
+            raise Busy("The benchmark is busy with other runs. Try again in a few seconds.")
         for k in list(_JOBS)[:-20]:
             del _JOBS[k]
         _JOBS[job_id] = job
@@ -402,7 +439,7 @@ def start_job(seed=1, campaigns=400, scenario="all", unbiased=False):
 
     def work():
         try:
-            job["result"] = run_full(seed, campaigns, scenario, progress, unbiased)
+            job["result"] = run_full(seed, campaigns, scenario, progress, entropy)
         except Exception as e:   # reported to the page, never swallowed
             job["error"] = str(e)
 
@@ -634,3 +671,100 @@ def compare(budget, old_rungs, fair_cpm, seed=1):
         "n": len(reps), "labels": SCENARIOS, "reps": reps, "totals": totals, "by_market": by_market,
         "scores": method_scores(budget, old_rungs_views, TRUE_CPI * 1000, totals),
     }
+
+
+# --- Advertiser page: one advertiser's own budget and expected price, run through one_campaign ---
+# The Advertiser page's what-ifs, on this module's market: key -> (label, Benchmark market, twist)
+ADVERTISER_SCENARIOS = {
+    "normal": ("What usually happens", "smooth", None),
+    "crowded": ("Too many creators", "abundant", None),
+    "thin": ("Too few views", "scarce", None),
+    "fraud": ("A fraud wave", "smooth", "fraud"),
+    "late_viral": ("Viral on the last day", "smooth", "late_viral"),
+}
+REVIEW_DAYS = 3     # days after the last post before the campaign settles
+
+
+def _timeline(rng, run, days):
+    """Spread the campaign's posts over `days`. Benchmark's market is a pile of independent posts, so here
+    they are grouped into creators of one size, each posting 1 to 8 times (45% chance of another post).
+    A creator joins on a random day in the first 70%; their other posts land on random days after that.
+    A post's views build up front-loaded to its final count, except a late-viral post, which stays quiet
+    until the last day. Each day holds what Clearing would owe if the campaign ended that day, with the same
+    price (engine.settle) and milestones as the final result, so the last day equals the real outcome.
+    Returns (timeline, number of creators)."""
+    budget, reference, rungs = run["budget"], run["reference"], run["new_rungs"]
+    by_tier = {}
+    for t, v, fraud, late in run["trace"]:
+        by_tier.setdefault(t, []).append((v, fraud, late))
+    posts, creators = [], 0   # posts: (tier, views, fraud, late, creator number, day it starts)
+    for t, ps in by_tier.items():
+        rng.shuffle(ps)
+        i = 0
+        while i < len(ps):
+            k = 1
+            while rng.random() < 0.45 and k < 8:
+                k += 1
+            join = int(0.7 * days * rng.random())
+            for m, (v, fraud, late) in enumerate(ps[i:i + k]):
+                posts.append((t, v, fraud, late, creators, join if m == 0 else rng.randint(join, days - 1)))
+            i += k
+            creators += 1
+    tau = days / 4
+    out = []
+    for d in range(days):
+        views = coins = n_posts = 0
+        who = set()
+        for t, final, fraud, late, c, start in posts:
+            if d < start:
+                continue
+            n_posts += 1
+            who.add(c)
+            if fraud:
+                continue
+            f = (1 - math.exp(-(d - start + 1) / tau)) / (1 - math.exp(-(days - start) / tau))
+            v = int((final if late is None else late) * f) if d < days - 1 else final   # late viral: quiet until the last day
+            views += v
+            coins += engine.rung_coins(v, rungs[t])
+        price = engine.settle(budget, views, reference)[0] if views else 0.0
+        out.append({"views": views, "spend": price * coins, "creators": len(who), "posts": n_posts})
+    return out, creators
+
+
+def advertiser_run(budget, cpm, scenario="normal", seed=1, days=14):
+    """The advertiser gives a budget (rupees), the price per 1,000 views (rupees) they'd be happy with and
+    a duration. Returns one campaign in full, shaped like the Advertiser page's run (a day-by-day timeline
+    and a report)."""
+    budget, cpm = float(budget), float(cpm)
+    if budget < 1000:
+        raise ValueError("Budget must be at least ₹1,000")
+    if cpm <= 0:
+        raise ValueError("Expected price per 1,000 views must be above zero")
+    if scenario not in ADVERTISER_SCENARIOS:
+        raise ValueError(f"scenario must be one of {', '.join(ADVERTISER_SCENARIOS)}")
+    market, twist = ADVERTISER_SCENARIOS[scenario][1:]
+    seed, days = int(seed), int(_clip(int(days), 3, 90))
+    make = lambda tag, trace=False: one_campaign(random.Random(f"advertiser-{seed}-{tag}"), market, budget=budget,
+                                                 expected_cpi=cpm / 1000, trace=trace, twist=twist)
+    run = make("run", True)
+    rng = random.Random(f"advertiser-{seed}-timeline")
+    timeline, creators = _timeline(rng, run, days)
+    trace = run.pop("trace")
+    n, o = run["new"], run["old"]
+    views, price = run["views"], n["price"]
+    sample = trace if len(trace) <= 3000 else rng.sample(trace, 3000)
+    report = {
+        "genuine_views": views, "cpm": 1000 * n["spend"] / views if views else None,
+        "old_cpm": 1000 * o["spend"] / views if views else None, "paid": n["spend"], "old_paid": o["spend"],
+        "old_over_budget": max(0.0, o["spend"] - budget), "money_back": max(0.0, budget - n["spend"]),
+        "money_back_liquidity": max(0.0, budget - price * views), "money_back_rungs": max(0.0, price * views - n["spend"]),
+        "fraud_blocked": run["fraud_blocked"], "fraud_posts": run["fraud_posts"], "creators": creators, "posts": run["posts"],
+        "cards": ([{"kind": "cheaper"}] if n["regime"] == "plenty" and price < run["reference"] else []),
+    }
+    ours = {"timeline": timeline,
+            "events": [{"kind": "fair_reach", "group": [t]} for t in run["rescued"]],
+            "posts": [{"fraud": f, "views": v, "rung_coins": 0 if f else engine.rung_coins(v, run["new_rungs"][t])} for t, v, f, _ in sample]}
+    return {"seed": seed, "scenario": scenario, "scenario_label": ADVERTISER_SCENARIOS[scenario][0], "tiers": TIER_NAMES,
+            "budget": budget, "cpm": cpm, "days": days, "true_cpm": TRUE_CPI * 1000, "levels": engine.LEVELS,
+            "settles_on": (date.today() + timedelta(days=days + REVIEW_DAYS)).isoformat(),
+            "run": run, "ours": ours, "report": report}

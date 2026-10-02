@@ -242,7 +242,7 @@ svg text { font-family: var(--mono); }
 .hm.h { overflow-wrap: normal; word-break: normal; letter-spacing: 0; font-size: 8.5px; }
 @media (min-width: 560px) { .hm.h { font-size: 9.5px; letter-spacing: .06em; } }
 
-/* unbiased mode */
+/* entropy mode */
 .tog { display: inline-flex; align-items: center; gap: 10px; background: var(--card-2); border: 1px solid var(--line-2); color: var(--ink-2); border-radius: 99px; padding: 10px 14px 10px 18px; font: 600 14px var(--sans); cursor: pointer; margin-left: auto; }
 .tog i { width: 34px; height: 20px; border-radius: 99px; background: var(--line-2); position: relative; transition: background .2s; }
 .tog i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--ink); transition: transform .2s; }
@@ -250,12 +250,12 @@ svg text { font-family: var(--mono); }
 .tog[aria-pressed="true"] i { background: var(--good); }
 .tog[aria-pressed="true"] i::after { transform: translateX(14px); background: #000; }
 .bm-form select:disabled { opacity: .5; }
-.unb { border: 1px solid rgba(123, 216, 143, .45); background: linear-gradient(180deg, rgba(123, 216, 143, .09), rgba(123, 216, 143, .03)); border-radius: var(--r); padding: 18px 20px; display: grid; gap: 10px; }
-.unb h3 { font-size: 16px; letter-spacing: -.02em; color: var(--good); }
-.unb p { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.55; }
-.unb ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
-.unb .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 18px; }
-.unb b { color: var(--ink); }
+.ent { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; width: fit-content; max-width: 100%; border: 1px solid rgba(123, 216, 143, .45); background: rgba(123, 216, 143, .07); border-radius: 99px; padding: 7px 16px 7px 12px; font-size: 13px; }
+.ent i { width: 8px; height: 8px; border-radius: 50%; background: var(--good); animation: ent-pulse 1.6s ease-in-out infinite; }
+.ent b { color: var(--good); font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.ent span { color: var(--ink-2); }
+@keyframes ent-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .ent i { animation: none; } }
 
 /* v0.4: readable "how it works", tighter page scale */
 .bm h1.h2 { font-size: clamp(26px, 3.6vw, 46px); }

@@ -8,9 +8,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="loader.css">
   <link rel="stylesheet" href="benchmark.css">
 </head>
 <body>
+  <script src="loader.js"></script>
   <header class="nav">
     <div class="nav-in">
       <a class="logo" href="index.html#home"><i></i>Clearing</a>
@@ -34,7 +36,7 @@
         <label>Seed<input id="bm-seed" type="number" min="1" value="1"></label>
         <button class="cta gold" type="submit">Run again</button>
         <button class="cta ghost" type="button" id="bm-rand">New seed</button>
-        <button class="tog" type="button" id="bm-unb" aria-pressed="false" title="Draw everything at random. Nothing hand-picked.">Unbiased mode <i></i></button>
+        <button class="tog" type="button" id="bm-ent" aria-pressed="false" title="Randomised stress test: a fresh seed and every input drawn at random, nothing hand-picked.">Entropy mode <i></i></button>
       </form>
     </section>
 
@@ -54,7 +56,6 @@
         <div class="hs"><b>3 · A market shows up</b><p>Creators of every size post. Sometimes a crowd floods in, sometimes too few arrive, sometimes a post goes viral.</p></div>
         <div class="hs"><b>4 · Both get paid, and we compare</b><p>The old ladder pays whatever crosses a rung — no ceiling. Clearing gets the same budget and feel, builds its own rungs per size from past data, and never pays past the budget.</p></div>
       </div>
-      <p class="muted">Unbiased mode (the switch above) swaps every fixed number below for a wide random draw — its banner lists exactly what.</p>
       <details class="bm-how2">
         <summary>The exact numbers</summary>
         <ol>

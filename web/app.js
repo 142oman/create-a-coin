@@ -183,8 +183,12 @@ const FMT = { reel: "Reels", carousel: "Carousels", short: "Shorts", long_form: 
 const PLAT = { instagram: "Instagram", youtube: "YouTube" };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
+const LOADING = { "/api/publish": "Running your campaign", "/api/creator/profiles": "Finding creators", "/api/creator/campaigns": "Finding campaigns",
+  "/api/creator/run": "Joining the campaign", "/api/compare": "Running 300 simulated markets", "/api/compare/random-ladder": "Drawing up a ladder" };
+
 async function api(path, body) {
-  const res = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+  const opts = body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {};
+  const res = await (window.Loader ? Loader.fetch(path, opts, LOADING[path.split("?")[0]] || "Loading") : fetch(path, opts));
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || res.statusText);
   return data;
@@ -628,7 +632,7 @@ const REPLAYS = [
   ["crowded", "Too many creators", "More creators join than you planned for.", "With a rate fixed in advance, every extra creator is paid on top, so spend can run past your budget.", "More creators, lower prices. Watch every view get cheaper."],
   ["thin", "Too few views", "Only a few creators join, or their posts get few views.", "A large budget split between very few creators would pay them far more than their reach is worth.", "Few takers. We negotiate the price down and return the rest. Watch it settle."],
   ["fraud", "A fraud wave", "Creators buy fake views to look better.", "Fake views make a creator's numbers look better than they are, and every one of them is a view you could end up paying for.", "Fakes come in, and nothing is paid until they're checked. Watch what happens to your budget."],
-  ["late_viral", "Viral on the last day", "One post explodes on the final day.", "With rates fixed in advance, a viral post is paid its full rate on top of everyone else.", "A last-minute spike, and your budget holds. Watch it happen."],
+  ["late_viral", "Viral on the last day", "Several big posts explode on the final day.", "With rates fixed in advance, every viral post is paid its full rate on top of everyone else.", "A last-minute spike, and your budget holds. Watch it happen."],
 ];
 
 const fit = (root) => {

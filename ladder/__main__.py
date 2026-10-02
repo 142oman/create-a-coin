@@ -75,7 +75,7 @@ def cmd_publish(args):
 
 def cmd_serve(args):
     from .server import serve
-    serve(args.port)
+    serve(args.port, args.host)
 
 
 def main(argv=None):
@@ -97,7 +97,8 @@ def main(argv=None):
     p.add_argument("--scenario", default="normal", choices=list(simulate.SCENARIOS))
     p.set_defaults(func=cmd_publish)
     s = sub.add_parser("serve", help="run the web app")
-    s.add_argument("--port", type=int, default=8000)
+    s.add_argument("--port", type=int, default=None, help="default: $PORT, else 8000")
+    s.add_argument("--host", default=None, help="default: $HOST, else 0.0.0.0 when $PORT is set, else 127.0.0.1")
     s.set_defaults(func=cmd_serve)
     args = parser.parse_args(argv)
     try:
